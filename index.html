@@ -806,7 +806,12 @@ function show(v){
   ({book:renderBook,ac:renderAc,sup:renderSups,set:renderSettings}[v]||(()=>{}))();
   window.scrollTo(0,0);
 }
-$('nav').addEventListener('click',e=>{const b=e.target.closest('button');if(b)show(b.dataset.v);});
+$('nav').addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  // the Entry tab always means a new entry; editing only happens from the Logbook
+  if(b.dataset.v==='log'&&editingId){newEntry();toast('Edit closed. This is a new entry.');}
+  show(b.dataset.v);
+});
 
 /* ---------- modal ---------- */
 const modal=$('modal');
@@ -998,7 +1003,9 @@ $('btnCancel').onclick=()=>{newEntry();show('book');};
 $('btnDup').onclick=()=>{const e=S.entries.find(x=>x.id===editingId);newEntry({...e,date:todayISO(),job:''});toast('Copied. Change what you need and save.');};
 $('btnDel').onclick=async()=>{if(!confirm('Delete this entry?'))return;tombstone(S.entries,editingId);await save();newEntry();toast('Entry deleted');show('book');};
 
+let savingEntry=false;
 $('btnSave').onclick=async()=>{
+  if(savingEntry) return;            // ignore a double tap while the first save is still writing
   const f=formEntry(),errs=[];
   if(!f.acts.length) errs.push('activity type');
   if(!f.date) errs.push('a valid date');
@@ -1017,16 +1024,21 @@ $('btnSave').onclick=async()=>{
   const old=editingId?S.entries.find(x=>x.id===editingId):null;
   const e={id:editingId||uid(),createdAt:old?.createdAt||now(),purpose:f.purpose,acts:f.acts,date:f.date,aircraftId:f.aircraftId,ata:f.ata,job:f.job,task:f.task,
     reason:f.reason,manual:f.manual,tooling:f.tooling,challenges:f.challenges,result:f.result,supervisorId:supId};
-  upsert(S.entries,e);
-  await save();
+  const wasEditing=!!editingId;
+  savingEntry=true;$('btnSave').disabled=true;
+  try{upsert(S.entries,e);await save();}
+  catch(err){alert('Could not save: '+err.message);return;}
+  finally{savingEntry=false;$('btnSave').disabled=false;}
   fillSupList();
   const filled=groupPages(live(S.entries)).filter(p=>p.full&&p.key===groupKey(e)&&!fullBefore.has(pageSig(p)));
-  if(editingId){toast('Entry updated');newEntry();show('book');}
+  if(wasEditing){toast('Entry updated');newEntry();show('book');}
   else{
-    await idb.del('draft');
-    if(!f.supName) toast('Saved. No supervisor yet, so add one before printing.',3500); else if(!newSup) toast('Entry saved');
-    // keep date, aircraft, ATA and supervisor for the next task on the same job
-    newEntry({date:f.date,aircraftId:f.aircraftId,ata:f.ata,supName:f.supName,purpose:f.purpose});
+    clearTimeout(draftT);await idb.del('draft');
+    const total=live(S.entries).length;
+    if(!f.supName) toast(`Saved, ${total} in your logbook. No supervisor yet, so add one before printing.`,3500);
+    else if(!newSup) toast(`Entry saved, ${total} in your logbook`);
+    // start a completely fresh entry: every box cleared, date back to today
+    newEntry();window.scrollTo(0,0);
   }
   if(filled.length&&askPrintOn()) askToPrint(filled);
 };
