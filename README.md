@@ -14,10 +14,6 @@ Phone web app for filling in CAA CAP 741 Section 3.1 (Maintenance Experience) pa
 | `manifest.webmanifest`, `icon-*.png` | Home-screen app setup |
 | `tools/` | Scripts to rebuild the `data/` lists (not needed online) |
 
-## Put it online (GitHub Pages)
-1. Create a new repo, e.g. `cap741`, and upload `index.html`, `cap741-template.pdf`, `pdf-lib.min.js`, `sw.js`, `manifest.webmanifest`, the icons and the `data` folder to the root. The `tools` folder and the Excel file can stay off it.
-2. Settings → Pages → Deploy from branch → `main` / root.
-3. Open `https://mattclarke873.github.io/cap741/` in Safari on the iPhone → Share → **Add to Home Screen**.
 
 When you upload changes, bump `VERSION` in `sw.js` (e.g. `cap741-v3` → `cap741-v4`) so phones fetch the new copy.
 
