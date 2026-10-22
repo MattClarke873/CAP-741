@@ -231,6 +231,9 @@ ol.steps b{display:block;font:700 16.5px/1.25 var(--head);margin-bottom:2px}
 .rbar{height:10px;border-radius:5px;background:var(--line);overflow:hidden}
 .rbar i{display:block;height:100%;background:var(--accent);border-radius:5px}
 .cv .flag{font:600 10.5px/1.2 var(--body);color:var(--warn);margin-top:3px}
+.certnote{margin-top:18px;padding:10px 12px;border-radius:8px;border:1.5px solid var(--accent);background:var(--accent-soft);font-size:14px}
+.certnote b{display:block;font:700 16px/1.2 var(--head);margin-bottom:2px}
+.certnote .link{margin-top:4px}
 .dupbox{margin-top:8px;padding:10px 12px;border-radius:8px;border:1.5px solid var(--warn);background:var(--warn-soft);font-size:14px}
 .dupbox b{display:block;font:700 16px/1.2 var(--head);color:var(--warn);margin-bottom:4px}
 .dupbox .mono{font-size:12px;color:var(--muted);margin-top:6px}
@@ -317,10 +320,13 @@ ol.steps b{display:block;font:700 16.5px/1.25 var(--head);margin-bottom:2px}
     <div class="fit" id="fitBox">Checking fit…</div>
   </fieldset>
 
+  <div id="supBlock">
   <label>Supervisor</label>
   <input id="fSup" list="supList" placeholder="Pick or type a new name" autocomplete="off" autocapitalize="words">
   <datalist id="supList"></datalist>
   <div class="hint" id="supHint">Their licence number goes on the signature sheet, not on the entry.</div>
+  </div>
+  <div class="certnote" id="certNote" hidden></div>
 
   <div class="btns">
     <button class="btn block" id="btnSave" type="button">Save entry</button>
@@ -379,6 +385,10 @@ ol.steps b{display:block;font:700 16.5px/1.25 var(--head);margin-bottom:2px}
   <div class="card">
     <label style="margin-top:0">Logbook owner's name <span class="opt">(printed on every page)</span></label>
     <input id="sOwner" autocapitalize="words">
+    <div class="row"><div><label>Your licence cat.</label><input id="sOwnerCat" placeholder="B1.3"></div>
+    <div><label>Your licence number</label><input id="sOwnerLic" class="mono" autocapitalize="characters" placeholder="UK.66.…"></div></div>
+    <label>Your MRO &amp; approval number</label><input id="sOwnerMro" placeholder="Type a company, town or UK.145 number">
+    <div class="hint">Used when you mark a job as certification: your name and licence go in the supervisor box, and you're added to the signature sheet.</div>
   </div>
 
   <h3>Pages and printing</h3>
@@ -546,6 +556,8 @@ function typeLabel(ac){
 const ataLabel = c => c ? `${c} - ${ATA_NAME[c]||''}` : '';
 const groupKey = e => e.ata+'|'+typeLabel(acById(e.aircraftId));
 const contMark = () => S.settings.contMark||'"';
+const isCert = e => e.purpose==='certification';
+const ownerSigner = () => ({name:S.settings.ownerName||'',cat:S.settings.ownerCat||'',licNo:S.settings.ownerLic||'',mro:S.settings.ownerMro||''});
 const askPrintOn = () => S.settings.askPrint!==false;
 
 /* ---------- IndexedDB key/value store ---------- */
@@ -740,8 +752,11 @@ async function buildPdf(pages,withSig){
 
   // Signature sheet(s) first
   if(withSig){
-    const ids=[...new Set(entries.map(e=>e.supervisorId).filter(Boolean))];
+    const ids=[...new Set(entries.filter(e=>!isCert(e)).map(e=>e.supervisorId).filter(Boolean))];
     const sups=ids.map(supById).filter(Boolean).sort((a,b)=>a.name.localeCompare(b.name));
+    // certified jobs are signed by the logbook owner, so they go on the sheet too (once)
+    const me=ownerSigner();
+    if(entries.some(isCert)&&me.name&&!sups.some(x=>x.licNo&&x.licNo===me.licNo)) sups.push(me);
     for(let p=0;p<Math.max(1,Math.ceil(sups.length/SIGS_PER_PAGE));p++){
       const [pg]=await doc.copyPages(tpl,[T.sigPage-1]);doc.addPage(pg);
       sups.slice(p*SIGS_PER_PAGE,(p+1)*SIGS_PER_PAGE).forEach((s,i)=>{
@@ -761,7 +776,7 @@ async function buildPdf(pages,withSig){
     line(pg,ataLabel(P.ata),TASK.ata.x,TASK.ata.base,TASK.ata.max,10);
     if(owner) line(pg,owner,TASK.owner.x,TASK.owner.base,TASK.owner.max,10);
     P.items.forEach(({e,slot,L})=>{
-      const C=TASK.cols,ac=acById(e.aircraftId),sup=supById(e.supervisorId);
+      const C=TASK.cols,ac=acById(e.aircraftId),sup=isCert(e)?ownerSigner():supById(e.supervisorId);
       for(let j=0;j<L.k;j++){
         const top=TASK.rows[slot+j],bot=TASK.rows[slot+j+1];
         if(j===0){
@@ -774,7 +789,7 @@ async function buildPdf(pages,withSig){
         }
         // supervisor signs once, in the lowest row of the entry; rows above carry the mark
         if(j<L.k-1) drawMark(pg,C.sup,top,bot);
-        else if(sup) drawBox(pg,[{t:sup.name}],C.sup[0],C.sup[1],top,bot,{valign:'bottom',sizes:[8,7.5,7,6.5,6]});
+        else if(sup) drawBox(pg,[{t:isCert(e)?[sup.name,[sup.licNo,sup.cat].filter(Boolean).join(' ')].filter(Boolean).join('\n'):sup.name}],C.sup[0],C.sup[1],top,bot,{valign:'bottom',sizes:[8,7.5,7,6.5,6]});
         drawLines(pg,rowLines(L,j),L,C.task[0],top);
       }
     });
@@ -884,7 +899,18 @@ const engineOf=rating=>(rating.match(/\(([^()]*)\)\s*$/)||[])[1]||'';
 /* ---------- ENTRY FORM ---------- */
 let acts=new Set(),purpose='';
 const PURPOSE={training:'Training',certification:'Certification'};
-function renderPurpose(){document.querySelectorAll('#fPurpose button').forEach(b=>{b.classList.toggle('on',b.dataset.p===purpose);b.setAttribute('aria-pressed',b.dataset.p===purpose);});}
+function renderPurpose(){
+  document.querySelectorAll('#fPurpose button').forEach(b=>{b.classList.toggle('on',b.dataset.p===purpose);b.setAttribute('aria-pressed',b.dataset.p===purpose);});
+  // a certified job has no supervisor: you sign it yourself
+  $('supBlock').hidden=purpose==='certification';updateCertNote();
+}
+function updateCertNote(){
+  const n=$('certNote');n.hidden=purpose!=='certification';if(n.hidden)return;
+  const o=ownerSigner();
+  n.innerHTML=o.licNo?`<b>You certify this job</b>${esc(o.name||'Your name')}, ${esc(o.licNo)}${o.cat?' ('+esc(o.cat)+')':''} goes in the supervisor box.`
+    :`<b>You certify this job</b>Your details go in the supervisor box. <button type="button" class="link" id="certSet">Add your licence number in Settings</button>`;
+  const b=$('certSet');if(b)b.onclick=()=>show('set');
+}
 $('fPurpose').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;purpose=purpose===b.dataset.p?'':b.dataset.p;renderPurpose();saveDraft();});
 
 function renderActs(){
@@ -1023,7 +1049,7 @@ $('btnSave').onclick=async()=>{
   if(!f.task) errs.push('task description');
   if(errs.length){toast('Please add: '+errs.join(', '),3500);return;}
   let supId='',newSup=false;
-  if(f.supName){
+  if(f.supName&&f.purpose!=='certification'){
     let s=live(S.supervisors).find(x=>x.name.toLowerCase()===f.supName.toLowerCase());
     if(!s){s={id:uid(),name:f.supName,cat:'',licNo:'',mro:''};upsert(S.supervisors,s);newSup=true;toast(`${f.supName} added to supervisors. Add their licence details later.`,3500);}
     supId=s.id;
@@ -1043,7 +1069,8 @@ $('btnSave').onclick=async()=>{
   else{
     clearTimeout(draftT);await idb.del('draft');
     const total=live(S.entries).length;
-    if(!f.supName) toast(`Saved, ${total} in your logbook. No supervisor yet, so add one before printing.`,3500);
+    if(f.purpose==='certification') toast(`Certified entry saved, ${total} in your logbook`);
+    else if(!f.supName) toast(`Saved, ${total} in your logbook. No supervisor yet, so add one before printing.`,3500);
     else if(!newSup) toast(`Entry saved, ${total} in your logbook`);
     // start a completely fresh entry: every box cleared, date back to today
     newEntry();window.scrollTo(0,0);
@@ -1179,7 +1206,7 @@ function sheetHtml(P,pi){
     const ac=acById(e.aircraftId),s=supById(e.supervisorId);
     for(let j=0;j<L.k;j++){
       const txt=esc(linesText(rowLines(L,j)));
-      const supLine=j===L.k-1?`<div class="m${s?'':' warn'}">${s?esc(s.name):'No supervisor'}</div>`:'';
+      const supLine=j<L.k-1?'':isCert(e)?`<div class="m">Certified: ${esc(S.settings.ownerName||'you')}</div>`:`<div class="m${s?'':' warn'}">${s?esc(s.name):'No supervisor'}</div>`;
       rows.push(j===0
         ?`<div class="slot" data-id="${e.id}"><div class="l"><b>${fmtD(e.date)}</b>${esc(ac?.reg||'')}<div class="ac">${esc((e.acts||[]).join(', '))}</div>${e.purpose?`<span class="pt ${e.purpose}">${PURPOSE[e.purpose]}</span>`:''}</div>
            <div><div class="x">${txt}</div>${supLine}</div></div>`
@@ -1320,12 +1347,14 @@ function renderBook(){
   if(types.includes(tv))$('xType').value=tv; if(atas.includes(av))$('xAta').value=av;
 
   const es=filteredEntries(),pages=groupPages(es);bookPages=pages;
-  const sups=[...new Set(es.map(e=>e.supervisorId).filter(Boolean))].map(supById).filter(Boolean);
-  const noSup=es.filter(e=>!e.supervisorId).length, badSup=sups.filter(supMissing);
+  const sups=[...new Set(es.filter(e=>!isCert(e)).map(e=>e.supervisorId).filter(Boolean))].map(supById).filter(Boolean);
+  const noSup=es.filter(e=>!isCert(e)&&!e.supervisorId).length, badSup=sups.filter(supMissing);
   const tooLong=es.filter(e=>!entryLayout(e).ok).length;
   const w=[];
   if(!S.settings.ownerName) w.push('Add your name in Settings so it prints on every page.');
   if(noSup) w.push(`${noSup} ${noSup===1?'entry has':'entries have'} no supervisor.`);
+  const certN=es.filter(isCert).length;
+  if(certN&&!S.settings.ownerLic) w.push(`${certN} certified ${certN===1?'job uses':'jobs use'} your details. Add your licence number in Settings so it prints.`);
   if(badSup.length) w.push(`Licence details missing for ${badSup.map(s=>esc(s.name)).join(', ')}.`);
   const cov=coverageStats(),routine=[...cov.entries()].filter(([,c])=>c.routine).map(([a])=>a).sort((a,b)=>+a- +b);
   const reps=[...cov.values()].reduce((n,c)=>n+c.n-c.tasks.size,0);
@@ -1358,6 +1387,11 @@ $('btnExport').onclick=()=>exportPages(groupPages(filteredEntries()),$('xSig').c
 
 /* ---------- SETTINGS ---------- */
 $('sOwner').addEventListener('change',async()=>{await setSetting('ownerName',$('sOwner').value.trim());toast('Saved');});
+[['sOwnerCat','ownerCat'],['sOwnerLic','ownerLic'],['sOwnerMro','ownerMro']].forEach(([id,k])=>$(id).addEventListener('change',async()=>{
+  let v=$(id).value.trim();if(k==='ownerLic')v=v.toUpperCase();await setSetting(k,v);updateCertNote();toast('Saved');}));
+attachSuggest($('sOwnerMro'),{list:'part145-orgs',find:findOrgs,
+  row:it=>`<b>${esc(it.name)}</b><small>${esc(it.ref)}${it.town?', '+esc(it.town):''}</small>`,
+  pick:async it=>{$('sOwnerMro').value=`${it.name} ${it.ref}`;await setSetting('ownerMro',$('sOwnerMro').value);toast('Saved');}});
 $('sAskPrint').addEventListener('change',async()=>{await setSetting('askPrint',$('sAskPrint').checked);toast('Saved');});
 $('sMark').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;await setSetting('contMark',b.dataset.m);renderSettings();updateFit();});
 $('btnBackup').onclick=async()=>{
@@ -1390,6 +1424,7 @@ $('btnTplReset').onclick=async()=>{await idb.del('template');renderSettings();to
 
 async function renderSettings(){
   $('sOwner').value=S.settings.ownerName||'';
+  $('sOwnerCat').value=S.settings.ownerCat||'';$('sOwnerLic').value=S.settings.ownerLic||'';$('sOwnerMro').value=S.settings.ownerMro||'';
   $('sAskPrint').checked=askPrintOn();
   document.querySelectorAll('#sMark button').forEach(b=>b.classList.toggle('on',b.dataset.m===contMark()));
   const t=await idb.get('template');
