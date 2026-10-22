@@ -76,6 +76,8 @@ button:focus-visible,summary:focus-visible,a:focus-visible{outline:3px solid var
 .chip.on::after{content:"";position:absolute;top:8px;right:8px;width:7px;height:12px;border:solid var(--on-accent);border-width:0 2.5px 2.5px 0;transform:rotate(45deg)}
 .acts{display:grid;grid-template-columns:repeat(3,1fr)}
 .mini{font-size:13px;padding:6px 10px;border-radius:99px}
+.chip.mini.on::after{display:none}
+#covLic .chip{font:700 16px/1 var(--head);padding:8px 11px}
 
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1.5px solid var(--accent);border-radius:8px;padding:12px 16px;font:700 18px/1.1 var(--head);letter-spacing:.01em;background:var(--accent);color:var(--on-accent);cursor:pointer;text-decoration:none}
 .btn.sec{background:transparent;color:var(--ink);border-color:var(--line)}
@@ -187,6 +189,41 @@ ol.steps b{display:block;font:700 16.5px/1.25 var(--head);margin-bottom:2px}
 .copy button{font:500 13px var(--mono);border:1.5px dashed var(--accent);background:transparent;color:var(--ink);border-radius:6px;padding:6px 9px;cursor:pointer}
 .copy button.done{border-style:solid;background:var(--accent-soft)}
 
+/* ATA coverage: one tile per chapter, the bar fills toward the low end of the target */
+.cov{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:12px}
+.cov>summary{list-style:none;cursor:pointer;padding:14px 16px;display:grid;grid-template-columns:1fr auto;align-items:baseline;gap:4px 10px}
+.cov>summary::-webkit-details-marker{display:none}
+.cov>summary b{font:700 21px/1.1 var(--head)}
+.cov>summary span{grid-row:2;grid-column:1/-1;color:var(--muted);font-size:14px}
+.cov>summary::after{content:"Hide";font-size:13px;color:var(--muted)}
+.cov:not([open])>summary::after{content:"Show"}
+.cov .body{padding:0 16px 16px}
+.cov h4{font:700 16px/1.2 var(--head);margin:16px 0 8px;display:flex;gap:8px;align-items:baseline}
+.cov h4 small{font:400 13px var(--body);color:var(--muted)}
+.cvgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:6px}
+.cv{position:relative;text-align:left;border:1.5px solid var(--line);background:var(--field);border-radius:6px;padding:7px 8px 10px;font:inherit;color:var(--ink);cursor:pointer;overflow:hidden;min-height:80px;display:flex;flex-direction:column}
+.cv .c{font:800 21px/1 var(--head)}
+.cv .ct{position:absolute;top:8px;right:7px;font:700 18px/1 var(--head)}
+.cv .ct small{font-size:12px;color:var(--muted);font-weight:600}
+.cv .nm{font-size:11.5px;line-height:1.2;color:var(--muted);margin-top:4px;flex:1}
+.cv .ac{font:600 10.5px/1.2 var(--mono);color:var(--accent-ink);margin-top:4px}
+.cv i{position:absolute;left:0;bottom:0;height:4px;width:var(--p);background:var(--accent)}
+.cv.none{border-style:dashed;border-color:var(--danger)}
+.cv.none .c,.cv.none .ct{color:var(--danger)}
+.cv.low i{background:var(--warn)}
+.cv.full{background:var(--accent-soft);border-color:var(--accent)}
+.cv .for{font-size:10.5px;color:var(--accent-ink);margin-top:3px;line-height:1.2}
+.ready{display:grid;gap:8px;margin:14px 0 4px}
+.rd{display:grid;grid-template-columns:3.2em 1fr 3em;align-items:center;gap:10px}
+.rd b{font:800 18px/1 var(--head)}
+.rd span{font:700 17px/1 var(--head);text-align:right}
+.rbar{height:10px;border-radius:5px;background:var(--line);overflow:hidden}
+.rbar i{display:block;height:100%;background:var(--accent);border-radius:5px}
+.cvkey{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--muted);margin-top:10px}
+.cvkey span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px;border:1.5px solid var(--line)}
+.cvkey .k0::before{border:1.5px dashed var(--danger)}.cvkey .k1::before{background:var(--warn);border-color:var(--warn)}
+.cvkey .k2::before{background:var(--accent);border-color:var(--accent)}.cvkey .k3::before{background:var(--accent-soft);border-color:var(--accent)}
+
 /* autocomplete from the CAA lists */
 .sug-wrap{position:relative}
 .sug{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:30;background:var(--card);border:1.5px solid var(--accent);border-radius:8px;max-height:min(300px,45vh);overflow:auto;box-shadow:0 8px 24px rgba(8,12,11,.25);margin:0;padding:4px;list-style:none}
@@ -269,6 +306,10 @@ ol.steps b{display:block;font:700 16.5px/1.25 var(--head);margin-bottom:2px}
 <!-- ============ LOGBOOK ============ -->
 <section class="view" id="view-book">
   <h2>Logbook</h2>
+  <details class="cov" id="covBox" open>
+    <summary><b>ATA coverage</b><span id="covSum"></span></summary>
+    <div class="body" id="covBody"></div>
+  </details>
   <div class="card">
     <div class="row">
       <div><label style="margin-top:0">Aircraft type</label><select id="xType"></select></div>
@@ -388,6 +429,21 @@ const ATA = [
 ];
 const ATA_NAME = Object.fromEntries(ATA);
 const REASONS = ['Scheduled maintenance','Defect rectification','MEL rectification','Component change (life)','Modification / SB','AD compliance'];
+/* Chapters that matter for each licence (sub)category, split into main systems and the rest.
+   The CAA sets no minimum per chapter: targets are the industry rule of thumb, counted as distinct tasks. */
+const LICENCES = {
+  'B1.1':{label:'B1.1 Aeroplanes, turbine',main:['21','24','27','28','29','32','71','72','73','74','75','76','77','79','80'],
+    other:['05','12','20','22','23','25','26','30','31','33','34','35','36','38','45','46','49','51','52','53','54','55','56','57','61','78']},
+  'B1.2':{label:'B1.2 Aeroplanes, piston',main:['24','27','28','29','32','61','71','72','73','74','76','77','79','80','85'],
+    other:['05','12','20','21','22','23','25','26','30','31','33','34','35','37','51','52','53','55','56','57','78']},
+  'B1.3':{label:'B1.3 Helicopters, turbine',main:['24','27','28','29','32','62','63','64','65','67','71','72','73','74','75','76','77','79','80'],
+    other:['05','12','18','20','21','22','23','25','26','30','31','33','34','35','36','39','45','46','51','52','53','54','56','66','78']},
+  'B1.4':{label:'B1.4 Helicopters, piston',main:['24','27','28','29','32','62','63','64','65','67','71','72','73','74','76','77','79','80','85'],
+    other:['05','12','18','20','21','22','23','25','26','30','31','33','34','35','51','52','53','56','78']},
+  'B2':{label:'B2 Avionics',main:['22','23','24','31','34'],
+    other:['21','25','26','27','28','29','30','33','35','36','38','44','45','46','49','73','77']}
+};
+const TARGETS = {main:[5,10],other:[2,5]};
 const MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
 
 /* ---------- template geometry (points, measured from top of the A4-landscape CAA page) ---------- */
@@ -1044,7 +1100,79 @@ function sheetHtml(P,pi){
     <div class="sf"><span>${free?`${free} of ${ROWS_PER_PAGE} rows free`:'All five rows used'}</span><button class="btn sec" type="button" data-page="${pi}">Download page</button></div>
   </article>`;
 }
+/* ---------- ATA coverage (whole logbook, not the filters) ---------- */
+// Licences being applied for (several allowed). Main-system chapters weigh 3x in the readiness score.
+const WEIGHT = {main:3,other:1};
+const licences=()=>{const l=(S.settings.licences||[S.settings.licence]).filter(k=>LICENCES[k]);return l.length?l:['B1.3'];};
+function readiness(k,by){
+  const lic=LICENCES[k];let got=0,max=0;
+  for(const tier of ['main','other']) for(const c of lic[tier]){
+    const n=by.get(c)?.tasks.size||0;max+=WEIGHT[tier];got+=WEIGHT[tier]*Math.min(1,n/TARGETS[tier][0]);
+  }
+  return {pct:Math.round(got/max*100),empty:lic.main.filter(c=>!by.has(c)).length};
+}
+function coverageStats(){
+  const by=new Map();
+  for(const e of live(S.entries)){
+    if(!by.has(e.ata)) by.set(e.ata,{n:0,tasks:new Set(),acts:new Set()});
+    const c=by.get(e.ata);c.n++;c.tasks.add(compact(e.task));(e.acts||[]).forEach(a=>c.acts.add(a));
+  }
+  return by;
+}
+function renderCoverage(){
+  const sel=licences(),by=coverageStats();
+  // merge the selected licences: a chapter is "main" if any of them treats it as a main system
+  const lic={main:[],other:[]},needs={};
+  for(const k of sel) for(const tier of ['main','other']) for(const c of LICENCES[k][tier]){
+    (needs[c]=needs[c]||[]);if(tier==='main')needs[c].push(k);
+    if(!lic.main.includes(c)&&!lic.other.includes(c)) lic[tier].push(c);
+    else if(tier==='main'&&lic.other.includes(c)){lic.other.splice(lic.other.indexOf(c),1);lic.main.push(c);}
+  }
+  lic.main.sort((a,b)=>+a- +b);lic.other.sort((a,b)=>+a- +b);
+  const tile=(c,tier)=>{
+    const s=by.get(c),n=s?s.tasks.size:0,[lo,hi]=tier?TARGETS[tier]:[1,1];
+    const lvl=!n?'none':n<lo?'low':n<hi?'ok':'full';
+    const reps=s?s.n-n:0;
+    return `<button type="button" class="cv ${lvl}" data-ata="${c}" title="${n} distinct ${n===1?'task':'tasks'}${reps?`, ${reps} repeated`:''}">
+      <span class="c">${c}</span><span class="ct">${n}${tier?`<small>/${lo}</small>`:''}</span>
+      <span class="nm">${esc(ATA_NAME[c]||'')}</span>${sel.length>1&&tier==='main'?`<span class="for">Main for ${esc(needs[c].join(', '))}</span>`:''}${s?`<span class="ac">${esc(ACTS.map(a=>a[0]).filter(a=>s.acts.has(a)).join(' '))}</span>`:''}
+      <i style="--p:${Math.min(100,Math.round(n/lo*100))}%"></i></button>`;
+  };
+  const listed=new Set([...lic.main,...lic.other]);
+  const extra=[...by.keys()].filter(c=>!listed.has(c)).sort((a,b)=>+a- +b);
+  const scores=sel.map(k=>({k,...readiness(k,by)}));
+  $('covSum').textContent=scores.map(r=>`${r.k} ${r.pct}%`).join(', ')+(scores.some(r=>r.empty)?`. ${lic.main.filter(c=>!by.has(c)).length} main systems still empty.`:'');
+  $('covBody').innerHTML=`
+    <label style="margin-top:0">Applying for <span class="opt">(tap all that apply)</span></label>
+    <div class="chips" id="covLic">${Object.entries(LICENCES).map(([k,v])=>`<button type="button" class="chip mini${sel.includes(k)?' on':''}" data-k="${k}" aria-pressed="${sel.includes(k)}" title="${esc(v.label)}">${k}</button>`).join('')}</div>
+    <div class="hint">${esc(sel.map(k=>LICENCES[k].label).join(' + '))}</div>
+    <div class="ready">${scores.map(r=>`<div class="rd"><b>${r.k}</b><div class="rbar"><i style="width:${r.pct}%"></i></div><span>${r.pct}%</span></div>`).join('')}</div>
+    <div class="hint">Readiness is weighted: main systems count ${WEIGHT.main} times as much as other systems, and each chapter only counts up to its target.</div>
+    <h4>Main systems <small>aim for ${TARGETS.main.join('–')} varied tasks each</small></h4>
+    <div class="cvgrid">${lic.main.map(c=>tile(c,'main')).join('')}</div>
+    <h4>Other systems <small>aim for ${TARGETS.other.join('–')} each</small></h4>
+    <div class="cvgrid">${lic.other.map(c=>tile(c,'other')).join('')}</div>
+    ${extra.length?`<h4>Also logged</h4><div class="cvgrid">${extra.map(c=>tile(c,null)).join('')}</div>`:''}
+    <div class="cvkey"><span class="k0">None yet</span><span class="k1">Below target</span><span class="k2">On target</span><span class="k3">Top of range</span></div>
+    <div class="hint" style="margin-top:12px">The CAA sets no minimum per chapter. It looks for a broad spread across your licence category, and an empty main system often leads to questions. Counts are distinct tasks: logging the same task again doesn't add to them. Within each chapter, mix removal/installation, functional tests and troubleshooting. The codes on each tile show which you have. Tap a chapter to see its pages, or to start an entry if it's empty.</div>`;
+  $('covLic').onclick=async e=>{
+    const b=e.target.closest('[data-k]');if(!b)return;
+    const k=b.dataset.k,next=sel.includes(k)?sel.filter(x=>x!==k):[...sel,k];
+    if(!next.length){toast('Pick at least one licence');return;}
+    await setSetting('licences',Object.keys(LICENCES).filter(x=>next.includes(x)));renderCoverage();
+  };
+}
+$('covBody').addEventListener('click',e=>{
+  const t=e.target.closest('.cv');if(!t)return;
+  const c=t.dataset.ata;
+  if(t.classList.contains('none')){if(editingId)newEntry();show('log');$('fAta').value=c;onFormInput();toast(`ATA ${c} set on a new entry`);return;}
+  $('xType').value='';$('xAta').value=c;renderBook();$('bookList').scrollIntoView({behavior:'smooth'});
+});
+try{if(localStorage.getItem('covClosed')==='1')$('covBox').open=false;}catch(e){}
+$('covBox').addEventListener('toggle',()=>{try{localStorage.setItem('covClosed',$('covBox').open?'0':'1');}catch(e){}});
+
 function renderBook(){
+  renderCoverage();
   const all=live(S.entries);
   const types=[...new Set(all.map(e=>typeLabel(acById(e.aircraftId))))].sort();
   const atas=[...new Set(all.map(e=>e.ata))].sort((a,b)=>+a- +b);
