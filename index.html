@@ -460,12 +460,12 @@ const DBX_PATH = '/cap741-log.json';
 
 /* ---------- reference data ---------- */
 const ACTS = [
-  ['LOC','Location'],['FOT','Functional / Op test'],['SGH','Service & ground handling'],
+  ['INSP','Inspection'],['FOT','Functional / Op test'],['SGH','Service & ground handling'],
   ['R/I','Removal / Installation'],['MEL','Min. equipment list'],['TS','Troubleshooting'],
   ['REP','Repair'],['EW','Electrical / Wiring'],['MOD','Modification']
 ];
 // Activity types are spelled out in full on the printed page; the narrow column lets them shrink to 5pt
-const ACT_FULL = {LOC:'Location',FOT:'Functional / Operational test',SGH:'Service & Ground handling','R/I':'Removal / Installation',
+const ACT_FULL = {INSP:'Inspection',FOT:'Functional / Operational test',SGH:'Service & Ground handling','R/I':'Removal / Installation',
   MEL:'Minimum Equipment List',TS:'Troubleshooting',REP:'Repair',EW:'Electrical / Wiring',MOD:'Modification'};
 const ACT_SIZES = [7,6.5,6,5.5,5];
 const ATA = [
@@ -581,6 +581,13 @@ const idb = (()=>{
 /* ---------- state ---------- */
 let S, DEV;               // S = synced logbook data, DEV = this-device-only data (tokens)
 let editingId = null;
+/* Older entries used LOC (location) for inspections; it's now INSP. Converted entries are marked as
+   changed so the new code wins when syncing with another device. Returns true if anything changed. */
+function upgradeActs(){
+  let n=0;const t=now();
+  S.entries=S.entries.map(e=>e.acts&&e.acts.includes('LOC')?(n++,{...e,acts:[...new Set(e.acts.map(a=>a==='LOC'?'INSP':a))],updatedAt:t}):e);
+  return n>0;
+}
 const blank = () => ({v:1,settings:{ownerName:'',updatedAt:0},aircraft:[],supervisors:[],entries:[]});
 const acById = id => S.aircraft.find(a=>a.id===id);
 const supById = id => S.supervisors.find(s=>s.id===id);
@@ -1529,7 +1536,7 @@ $('btnImport').onclick=()=>$('importFile').click();
 $('importFile').onchange=async e=>{
   const f=e.target.files[0];if(!f)return;
   try{const d=JSON.parse(await f.text());if(!d||!Array.isArray(d.entries))throw new Error('Not a CAP 741 Log backup');
-    const before=live(S.entries).length;S=merge(S,d);await save();refreshAll();toast(`Imported ${live(S.entries).length-before} new entries`,3500);}
+    const before=live(S.entries).length;S=merge(S,d);upgradeActs();await save();refreshAll();toast(`Imported ${live(S.entries).length-before} new entries`,3500);}
   catch(err){alert('Import failed: '+err.message);}
   e.target.value='';
 };
@@ -1654,6 +1661,7 @@ async function sync(manual){
     if(d.ok) remote=await d.json(); else if(d.status!==409) throw new Error('Download failed ('+d.status+')');
     const before=JSON.stringify(S);
     if(remote) S=merge(S,remote);
+    upgradeActs();
     await idb.set('state',S);
     const u=await fetch('https://content.dropboxapi.com/2/files/upload',{method:'POST',headers:{Authorization:'Bearer '+t,'Content-Type':'application/octet-stream','Dropbox-API-Arg':JSON.stringify({path:DBX_PATH,mode:'overwrite',mute:true})},body:JSON.stringify(S)});
     if(!u.ok) throw new Error('Upload failed ('+u.status+')');
@@ -1712,6 +1720,7 @@ function refreshAll(keepForm){
 (async function boot(){
   S=(await idb.get('state'))||blank();
   DEV=(await idb.get('device'))||{};
+  if(upgradeActs()) await save();   // after DEV, since saving may start a sync
   if(navigator.storage&&navigator.storage.persist) navigator.storage.persist().catch(()=>{});
   await measureFonts();   // page packing needs text widths, so load them before anything renders
   fillAtaSelect();fillSupList();
