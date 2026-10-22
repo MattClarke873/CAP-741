@@ -591,10 +591,25 @@ async function save(sync=true){
 }
 function upsert(list,obj){obj.updatedAt=now();const i=list.findIndex(x=>x.id===obj.id);if(i>=0)list[i]=obj;else list.push(obj);}
 function tombstone(list,id){const i=list.findIndex(x=>x.id===id);if(i>=0)list[i]={id,deleted:true,updatedAt:now()};}
-async function setSetting(k,v){S.settings={...S.settings,[k]:v,updatedAt:now()};await save();}
+// each setting remembers when it was last changed (in _t), so sync merges them one box at a time
+async function setSetting(k,v){const t=now();S.settings={...S.settings,[k]:v,updatedAt:t,_t:{...(S.settings._t||{}),[k]:t}};await save();}
+function mergeSettings(a={},b={}){
+  // older files have no _t: every box in them counts as changed when the whole block was
+  const when=(s,k)=>s._t?.[k]??(k in s?(s.updatedAt||0):-1);
+  const out={_t:{}};
+  for(const k of new Set([...Object.keys(a),...Object.keys(b)])){
+    if(k==='updatedAt'||k==='_t') continue;
+    const ta=when(a,k),tb=when(b,k);
+    // newer wins; on a tie, a filled-in box beats an empty one
+    const pick=tb>ta||(tb===ta&&(a[k]===''||a[k]==null))?b:a;
+    if(k in pick){out[k]=pick[k];out._t[k]=Math.max(ta,tb,0);}
+  }
+  out.updatedAt=Math.max(a.updatedAt||0,b.updatedAt||0);
+  return out;
+}
 
 function merge(a,b){
-  const out={v:1,settings:((b.settings?.updatedAt||0)>(a.settings?.updatedAt||0)?b.settings:a.settings)||blank().settings};
+  const out={v:1,settings:mergeSettings(a.settings||blank().settings,b.settings||{})};
   const alive={};   // newest non-deleted copy of each aircraft/supervisor, from either side
   for(const k of ['aircraft','supervisors','entries']){
     const m=new Map();alive[k]=new Map();
@@ -1704,7 +1719,7 @@ function refreshAll(keepForm){
   newEntry(draft||undefined);
   setPill();
   templateBytes().catch(()=>toast('PDF template missing. Check cap741-template.pdf is uploaded.',4000));
-  if(!S.settings.ownerName&&!live(S.entries).length) setTimeout(()=>{show('set');toast('Start by adding your name. It prints on every page.',4000);},300);
+  if(!S.settings.ownerName&&!live(S.entries).length) setTimeout(()=>{show('set');toast('Start by adding your name, or connect Dropbox below to bring in your logbook and settings.',5000);},300);
   sync();
   if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 })();
