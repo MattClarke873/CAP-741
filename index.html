@@ -292,11 +292,14 @@ ol.steps b{display:block;font:700 16.5px/1.25 var(--head);margin-bottom:2px}
   </div>
   <div class="hint" id="dateHint"></div>
 
-  <label>Aircraft reg</label>
-  <select id="fAc"></select>
+  <label for="fAcText">Aircraft reg</label>
+  <input id="fAcText" class="mono" placeholder="Type a reg, e.g. G-VINP or ZM506" autocapitalize="characters" spellcheck="false">
+  <select id="fAc" hidden></select>
+  <div class="hint" id="acHint"></div>
 
-  <label>ATA chapter</label>
-  <select id="fAta"></select>
+  <label for="fAtaText">ATA chapter</label>
+  <input id="fAtaText" placeholder="Type a number or name, e.g. 63 or gearbox" spellcheck="false">
+  <select id="fAta" hidden></select>
 
   <label>Job card number</label>
   <input id="fJob" class="mono" autocomplete="off" autocapitalize="characters">
@@ -863,7 +866,7 @@ function search(items,q,rank,max=8){
   return hits.map(it=>[rank(it,words[0]),it]).sort((a,b)=>a[0]-b[0]).slice(0,max).map(x=>x[1]);
 }
 /* Attach a suggestion list under an input. Typing still works freely; picking a row calls pick(item). */
-function attachSuggest(input,{list,find,row,pick}){
+function attachSuggest(input,{list,local,source,find,row,pick,minLen=2,onFocus=false}){
   const wrap=document.createElement('div');wrap.className='sug-wrap';
   input.parentNode.insertBefore(wrap,input);wrap.appendChild(input);
   const ul=document.createElement('ul');ul.className='sug';ul.hidden=true;ul.setAttribute('role','listbox');wrap.appendChild(ul);
@@ -872,15 +875,17 @@ function attachSuggest(input,{list,find,row,pick}){
   const close=()=>{ul.hidden=true;sel=-1;};
   const paint=()=>{ul.querySelectorAll('li[data-i]').forEach(li=>li.classList.toggle('on',+li.dataset.i===sel));};
   const choose=i=>{const it=items[i];if(!it)return;pick(it);close();};
-  input.addEventListener('input',async()=>{
+  const update=async()=>{
     const q=input.value.trim();
-    if(q.length<2){close();return;}
-    const d=await loadList(list);if(!d||input.value.trim()!==q) return;
-    items=find(d,q);src=d.source;sel=-1;
+    if(q.length<minLen&&!(onFocus&&!q)){close();return;}
+    const d=local?{items:local(),source}:await loadList(list);if(!d||input.value.trim()!==q) return;
+    items=find(d,q);src=local?source:'the '+d.source;sel=-1;
     if(!items.length){close();return;}
-    ul.innerHTML=items.map((it,i)=>`<li data-i="${i}" role="option">${row(it)}</li>`).join('')+`<li class="src">From the ${esc(src)}</li>`;
+    ul.innerHTML=items.map((it,i)=>`<li data-i="${i}" role="option">${row(it)}</li>`).join('')+(src?`<li class="src">From ${esc(src)}</li>`:'');
     ul.hidden=false;
-  });
+  };
+  input.addEventListener('input',update);
+  if(onFocus) input.addEventListener('focus',update);
   ul.addEventListener('pointerdown',e=>e.preventDefault());   // keep focus so blur doesn't close before the tap lands
   ul.addEventListener('click',e=>{const li=e.target.closest('li[data-i]');if(li)choose(+li.dataset.i);});
   input.addEventListener('keydown',e=>{
@@ -920,10 +925,74 @@ $('fActs').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)
 $('reasonChips').innerHTML=REASONS.map(r=>`<button type="button" class="chip mini">${r}</button>`).join('');
 $('reasonChips').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;$('fReason').value=b.textContent;onFormInput();});
 
+/* Typed aircraft and ATA boxes. The hidden selects hold the real value (aircraft id, ATA code);
+   the text boxes show it and suggest from your aircraft and the ATA list as you type. */
+function syncAcText(){
+  const a=acById($('fAc').value);
+  $('fAcText').value=a&&!a.deleted?a.reg:'';
+  $('acHint').textContent=a&&!a.deleted?typeLabel(a):'';
+}
+function syncAtaText(){const c=$('fAta').value;$('fAtaText').value=c?`${c} – ${ATA_NAME[c]||''}`:'';}
+function setAc(id){$('fAc').value=id;syncAcText();lastAc=id;saveDraft();updateFit();}
+function setAta(c){$('fAta').value=c;syncAtaText();onFormInput();}
+const acItems=()=>live(S.aircraft).map(a=>({a,hay:compact(a.reg+' '+typeLabel(a)),r:compact(a.reg)}));
+function findAc(d,q){
+  const w=compact(q),used=new Map();
+  // aircraft you've logged most often come first when nothing is typed
+  for(const e of live(S.entries)) used.set(e.aircraftId,(used.get(e.aircraftId)||0)+1);
+  let hits=w?d.items.filter(it=>q.toLowerCase().split(/\s+/).map(compact).filter(Boolean).every(x=>it.hay.includes(x))):d.items.slice();
+  hits.sort((x,y)=>(w?(x.r.startsWith(w)?0:x.r.includes(w)?1:2)-(y.r.startsWith(w)?0:y.r.includes(w)?1:2):0)||(used.get(y.a.id)||0)-(used.get(x.a.id)||0)||x.a.reg.localeCompare(y.a.reg));
+  hits=hits.slice(0,8);
+  // offer to add it only once it looks like a whole reg, or nothing matches at all
+  if(q&&!d.items.some(it=>it.r===w)&&(!hits.length||w.length>=5)) hits.push({add:true,reg:q.toUpperCase()});
+  return hits;
+}
+const ataItems=()=>ATA.map(([code,name])=>({code,name,hay:compact(code+' '+name)}));
+function findAta(d,q){
+  let w=compact(q);
+  if(/^\d{3,}$/.test(w)) w=w.slice(0,2);   // 2122 -> 21
+  if(!w){const used=new Set(live(S.entries).map(e=>e.ata));return d.items.filter(it=>used.has(it.code)).slice(0,10);}
+  const words=q.toLowerCase().split(/\s+/).map(compact).filter(Boolean).map(x=>/^\d{3,}$/.test(x)?x.slice(0,2):x);
+  return d.items.filter(it=>words.every(x=>it.hay.includes(x)))
+    .sort((x,y)=>(x.code.startsWith(w)?0:compact(x.name).startsWith(w)?1:2)-(y.code.startsWith(w)?0:compact(y.name).startsWith(w)?1:2)).slice(0,10);
+}
+attachSuggest($('fAcText'),{local:acItems,source:'your aircraft',find:findAc,minLen:1,onFocus:true,
+  row:it=>it.add?`<b>Add new aircraft ${esc(it.reg)}</b><small>Not in your list yet</small>`:`<b class="mono">${esc(it.a.reg)}</b><small>${esc(typeLabel(it.a))}</small>`,
+  pick:it=>{
+    if(it.add){editAircraft(null,id=>{fillAcSelect(id);setAc(id);},{reg:it.reg});return;}
+    setAc(it.a.id);
+  }});
+attachSuggest($('fAtaText'),{local:ataItems,source:'the ATA list',find:findAta,minLen:1,onFocus:true,
+  row:it=>`<b>${it.code} – ${esc(it.name)}</b>`,pick:it=>setAta(it.code)});
+// typing an exact reg or chapter and moving on picks it without tapping the list
+function resolveAcText(){
+  const t=compact($('fAcText').value);
+  if(!t){if($('fAc').value){$('fAc').value='';syncAcText();updateFit();}return;}
+  const cur=acById($('fAc').value);if(cur&&compact(cur.reg)===t) return;
+  // "ZM506", "G-CJIY" or "ZM506 / G-CJIY" all find the same aircraft
+  const m=live(S.aircraft).filter(a=>compact(a.reg)===t||a.reg.split(/\s*[\/,]\s*|\s+/).map(compact).includes(t));
+  if(m.length===1) setAc(m[0].id);
+  else{$('fAc').value='';$('acHint').innerHTML='<span style="color:var(--danger)">Not in your aircraft list. Pick "Add new aircraft" from the list.</span>';updateFit();}
+}
+function resolveAtaText(){
+  const raw=$('fAtaText').value.trim();
+  if(!raw){if($('fAta').value){$('fAta').value='';onFormInput();}return;}
+  const m=raw.match(/^\d+/);let c=m?m[0].slice(0,2):'';
+  if(c.length===1) c='0'+c;
+  if(c&&ATA_NAME[c]){if(c!==$('fAta').value) setAta(c); else syncAtaText();return;}
+  const byName=ATA.filter(([,n])=>compact(n)===compact(raw));
+  if(byName.length===1){setAta(byName[0][0]);return;}
+  $('fAta').value='';onFormInput();
+}
+$('fAcText').addEventListener('blur',()=>setTimeout(resolveAcText,150));
+$('fAtaText').addEventListener('blur',()=>setTimeout(resolveAtaText,150));
+$('fAcText').addEventListener('input',()=>{$('acHint').textContent='';});
+
 function fillAcSelect(sel){
   const list=live(S.aircraft).sort((a,b)=>a.reg.localeCompare(b.reg));
   $('fAc').innerHTML=`<option value="">Select aircraft…</option>`+list.map(a=>`<option value="${a.id}">${esc(a.reg)}  ${esc(typeLabel(a))}</option>`).join('')+`<option value="__new">Add new aircraft…</option>`;
   if(sel!==undefined) $('fAc').value=sel;
+  syncAcText();
 }
 function fillAtaSelect(){
   $('fAta').innerHTML=`<option value="">Select ATA chapter…</option>`+ATA.map(([c,n])=>`<option value="${c}">${c} – ${esc(n)}</option>`).join('');
@@ -1017,7 +1086,7 @@ function setForm(e,{keepDate=false}={}){
   purpose=e.purpose||'';renderPurpose();
   if(!keepDate) $('fDate').value=e.date?fmtD(e.date):(e.dateText||fmtD(todayISO()));
   fillAcSelect(e.aircraftId||'');lastAc=e.aircraftId||'';
-  $('fAta').value=e.ata||'';
+  $('fAta').value=e.ata||'';syncAtaText();
   $('fJob').value=e.job||'';$('fTask').value=e.task||'';$('fReason').value=e.reason||'';$('fManual').value=e.manual||'';
   $('fTooling').value=e.tooling||'';$('fChal').value=e.challenges||'';$('fResult').value=e.result||'';
   $('fSup').value=e.supName!==undefined?e.supName:(supById(e.supervisorId)?.name||'');
@@ -1039,7 +1108,8 @@ $('btnDel').onclick=async()=>{if(!confirm('Delete this entry?'))return;tombstone
 
 let savingEntry=false;
 $('btnSave').onclick=async()=>{
-  if(savingEntry) return;            // ignore a double tap while the first save is still writing
+  if(savingEntry) return;
+  resolveAcText();resolveAtaText();            // ignore a double tap while the first save is still writing
   const f=formEntry(),errs=[];
   if(!f.acts.length) errs.push('activity type');
   if(!f.date) errs.push('a valid date');
@@ -1120,8 +1190,8 @@ function renderAc(){
 }
 $('acList').addEventListener('click',e=>{const it=e.target.closest('.item');if(it)editAircraft(it.dataset.id);});
 $('btnAddAc').onclick=()=>editAircraft(null);
-function editAircraft(id,after){
-  const a=id?acById(id):{reg:'',make:'',model:'',engine:'',serial:'',typeOverride:''};
+function editAircraft(id,after,pre={}){
+  const a=id?acById(id):{reg:pre.reg||'',make:'',model:'',engine:'',serial:'',typeOverride:''};
   openModal(id?'Edit aircraft':'New aircraft',`
     <label>Registration</label><input id="aReg" class="mono" autocapitalize="characters" value="${esc(a.reg)}" placeholder="G-ABCD">
     <div class="row"><div><label>Make</label><input id="aMake" value="${esc(a.make)}" placeholder="Leonardo"></div>
@@ -1290,7 +1360,7 @@ function renderCoverage(){
 $('covBody').addEventListener('click',e=>{
   const t=e.target.closest('.cv');if(!t)return;
   const c=t.dataset.ata;
-  if(t.classList.contains('none')){if(editingId)newEntry();show('log');$('fAta').value=c;onFormInput();toast(`ATA ${c} set on a new entry`);return;}
+  if(t.classList.contains('none')){if(editingId)newEntry();show('log');setAta(c);toast(`ATA ${c} set on a new entry`);return;}
   $('xType').value='';$('xAta').value=c;renderBook();$('bookList').scrollIntoView({behavior:'smooth'});
 });
 try{if(localStorage.getItem('covClosed')==='1')$('covBox').open=false;}catch(e){}

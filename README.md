@@ -32,6 +32,7 @@ No redirect URL is needed. Data syncs to `Apps/<your app name>/cap741-log.json`.
 
 ## Using it
 - **Entry tab:** pick activity type(s), date (defaults to today), aircraft, ATA chapter, job card, task detail and supervisor. The row meter shows how many of the page's five rows the entry will use and how many are left on that page.
+- **Aircraft reg and ATA chapter:** type in both boxes. Aircraft suggests from your own aircraft (ZM number or G-reg both work; most-used first), with an "Add new aircraft" option for a reg you haven't got yet. ATA suggests by number or name; a 4-digit code like 2122 becomes 21.
 - **Training or certification:** tap which one each entry is for, on the Entry tab. The choice carries over to the next entry. On the Logbook tab you can filter (and download) training or certification entries on their own, and bulk-mark entries that aren't set yet, such as imported ones. It isn't printed on the CAP 741 page.
 - **Certified jobs:** mark an entry as Certification and the supervisor box disappears from the form. On the PDF your name and licence number print in the supervisor box (lowest row if it spills), and you're added once to the signature sheet. Set your licence cat., number and MRO under Settings.
 - **Aircraft tab:** aircraft are grouped by their printed type in folding sections, each showing how many aircraft and entries it has. Tap a type to fold it; the app remembers which are folded on this device.
