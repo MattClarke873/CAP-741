@@ -367,6 +367,10 @@ const ACTS = [
   ['R/I','Removal / Installation'],['MEL','Min. equipment list'],['TS','Troubleshooting'],
   ['REP','Repair'],['EW','Electrical / Wiring'],['MOD','Modification']
 ];
+// Activity types are spelled out in full on the printed page; the narrow column lets them shrink to 5pt
+const ACT_FULL = {LOC:'Location',FOT:'Functional / Operational test',SGH:'Service & Ground handling','R/I':'Removal / Installation',
+  MEL:'Minimum Equipment List',TS:'Troubleshooting',REP:'Repair',EW:'Electrical / Wiring',MOD:'Modification'};
+const ACT_SIZES = [7,6.5,6,5.5,5];
 const ATA = [
   ['05','Time Limits/Maintenance Checks'],['06','Dimensions and Areas'],['07','Lifting and Shoring'],['08','Levelling and Weighing'],
   ['09','Towing and Taxiing'],['10','Parking, Mooring, Storage'],['11','Placards and Markings'],['12','Servicing'],
@@ -652,14 +656,16 @@ async function buildPdf(pages,withSig){
       for(let j=0;j<L.k;j++){
         const top=TASK.rows[slot+j],bot=TASK.rows[slot+j+1];
         if(j===0){
-          drawBox(pg,[{t:(e.acts||[]).join('\n')}],...C.act,top,bot);
+          drawBox(pg,[{t:(e.acts||[]).map(c=>ACT_FULL[c]||c).join('\n')}],...C.act,top,bot,{sizes:ACT_SIZES});
           drawBox(pg,[{t:fmtD(e.date)}],...C.date,top,bot);
           drawBox(pg,[{t:ac?ac.reg:''}],...C.reg,top,bot);
           drawBox(pg,[{t:e.job||''}],...C.job,top,bot);
-          if(sup) drawBox(pg,[{t:sup.name}],C.sup[0],C.sup[1],top,bot,{valign:'bottom',sizes:[8,7.5,7,6.5,6]});
         }else{
-          for(const c of ['act','date','reg','job','sup']) drawMark(pg,C[c],top,bot);
+          for(const c of ['act','date','reg','job']) drawMark(pg,C[c],top,bot);
         }
+        // supervisor signs once, in the lowest row of the entry; rows above carry the mark
+        if(j<L.k-1) drawMark(pg,C.sup,top,bot);
+        else if(sup) drawBox(pg,[{t:sup.name}],C.sup[0],C.sup[1],top,bot,{valign:'bottom',sizes:[8,7.5,7,6.5,6]});
         drawLines(pg,rowLines(L,j),L,C.task[0],top);
       }
     });
@@ -829,7 +835,7 @@ async function updateFit(){
     cls='ok';msg='Fits in one row';sub=`${L.size}pt text, ${L.lines.length} of ${L.per} lines.`;
   }else{
     cls='spill';msg=`Spills into ${L.k} rows`;
-    sub=`The rows below get ${contMark()==='"'?'ditto marks (")':'a dash (–)'} in the date, reg, job card and supervisor columns.`;
+    sub=`The rows below get ${contMark()==='"'?'ditto marks (")':'a dash (–)'} in the activity, date, reg and job card columns. The supervisor signs in the last row.`;
   }
   let where='';
   if(sp){
@@ -1022,10 +1028,11 @@ function sheetHtml(P,pi){
     const ac=acById(e.aircraftId),s=supById(e.supervisorId);
     for(let j=0;j<L.k;j++){
       const txt=esc(linesText(rowLines(L,j)));
+      const supLine=j===L.k-1?`<div class="m${s?'':' warn'}">${s?esc(s.name):'No supervisor'}</div>`:'';
       rows.push(j===0
         ?`<div class="slot" data-id="${e.id}"><div class="l"><b>${fmtD(e.date)}</b>${esc(ac?.reg||'')}<div class="ac">${esc((e.acts||[]).join(', '))}</div></div>
-           <div><div class="x">${txt}</div><div class="m${s?'':' warn'}">${s?esc(s.name):'No supervisor'}</div></div></div>`
-        :`<div class="slot cont" data-id="${e.id}"><div class="l">${mark}</div><div><div class="x">${txt}</div></div></div>`);
+           <div><div class="x">${txt}</div>${supLine}</div></div>`
+        :`<div class="slot cont" data-id="${e.id}"><div class="l">${mark}</div><div><div class="x">${txt}</div>${supLine}</div></div>`);
     }
   });
   while(rows.length<ROWS_PER_PAGE) rows.push(`<div class="slot blank"><div class="l"></div><div></div></div>`);
