@@ -592,11 +592,20 @@ async function setSetting(k,v){S.settings={...S.settings,[k]:v,updatedAt:now()};
 
 function merge(a,b){
   const out={v:1,settings:((b.settings?.updatedAt||0)>(a.settings?.updatedAt||0)?b.settings:a.settings)||blank().settings};
+  const alive={};   // newest non-deleted copy of each aircraft/supervisor, from either side
   for(const k of ['aircraft','supervisors','entries']){
-    const m=new Map();
-    for(const x of [...(a[k]||[]),...(b[k]||[])]){const y=m.get(x.id);if(!y||(x.updatedAt||0)>(y.updatedAt||0))m.set(x.id,x);}
+    const m=new Map();alive[k]=new Map();
+    for(const x of [...(a[k]||[]),...(b[k]||[])]){
+      const y=m.get(x.id);if(!y||(x.updatedAt||0)>(y.updatedAt||0))m.set(x.id,x);
+      if(!x.deleted){const z=alive[k].get(x.id);if(!z||(x.updatedAt||0)>(z.updatedAt||0))alive[k].set(x.id,x);}
+    }
     out[k]=[...m.values()];
   }
+  // An aircraft or supervisor deleted on one device but still used by entries comes back, so those
+  // entries never lose their aircraft. (The app won't delete one that's in use, so this only undoes accidents.)
+  const used={aircraft:new Set(),supervisors:new Set()};
+  for(const e of out.entries) if(!e.deleted){used.aircraft.add(e.aircraftId);used.supervisors.add(e.supervisorId);}
+  for(const k of ['aircraft','supervisors']) out[k]=out[k].map(x=>x.deleted&&used[k].has(x.id)&&alive[k].has(x.id)?{...alive[k].get(x.id),updatedAt:(x.updatedAt||0)+1}:x);
   return out;
 }
 
