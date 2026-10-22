@@ -1,0 +1,1236 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CAP 741 Log</title>
+<meta name="description" content="CAP 741 Section 3.1 maintenance experience logbook">
+<meta name="theme-color" content="#1c2422">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="741 Log">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-180.png">
+<style>
+/* Palette: bare Alclad aluminium, graphite, zinc-chromate primer, remove-before-flight red.
+   Type: Avenir Next Condensed (built into iOS/macOS, works offline) for placard-style headings and controls. */
+:root{
+  --bg:#e2e6e3; --card:#f6f7f5; --field:#ffffff; --ink:#1c2422; --muted:#5d6965; --line:#c5ccc8;
+  --accent:#93aa42; --accent-ink:#3d5014; --accent-soft:#e1e9c4; --on-accent:#161e07;
+  --bar:#1c2422; --bar-ink:#eef1ee; --bar-muted:#93a19c;
+  --danger:#c0182b; --ok:#3d7426; --warn:#8f5400; --warn-soft:#f3e4c8;
+  --paper:#fcfcf8; --rule:#b8c1bc; --pen:#17215c; --pencil:#7b8580;
+  --head:"Avenir Next Condensed","Arial Narrow","Roboto Condensed",sans-serif-condensed,sans-serif;
+  --body:"Avenir Next",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#121716; --card:#1b2220; --field:#141a19; --ink:#e3e8e4; --muted:#93a09b; --line:#2e3835;
+    --accent:#a7c056; --accent-ink:#c6dc7f; --accent-soft:#2a3317; --on-accent:#141b05;
+    --bar:#0b0f0e; --bar-ink:#e3e8e4; --bar-muted:#7f8c87;
+    --danger:#ff6f6f; --ok:#9bd07a; --warn:#f0b35a; --warn-soft:#33270f;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 var(--body);-webkit-text-size-adjust:100%}
+body{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+a{color:var(--accent-ink)}
+
+/* header: graphite bar with a primer stripe, like a painted spar cap */
+header{position:sticky;top:0;z-index:5;background:var(--bar);color:var(--bar-ink);padding:calc(10px + env(safe-area-inset-top)) 16px 10px;display:flex;align-items:center;gap:12px;border-bottom:3px solid var(--accent)}
+header .brand{flex:1;min-width:0;line-height:1.05}
+header h1{font:800 24px/1 var(--head);margin:0;letter-spacing:.01em}
+header p{margin:2px 0 0;font:500 13px/1.2 var(--head);color:var(--bar-muted)}
+.pill{font:600 13px/1 var(--head);padding:7px 11px;border-radius:99px;background:rgba(255,255,255,.09);white-space:nowrap;border:1px solid rgba(255,255,255,.14);color:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.pill::before{content:"";width:8px;height:8px;border-radius:50%;background:#8b9893}
+.pill.ok::before{background:#9bd07a}.pill.warn::before{background:#f0b35a}
+
+main{max-width:680px;margin:0 auto;padding:18px 16px}
+.view{display:none}.view.on{display:block}
+h2{font:700 30px/1.1 var(--head);margin:4px 0 14px;letter-spacing:-.005em}
+h3{font:700 19px/1.2 var(--head);margin:26px 0 8px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px}
+
+label{display:block;font-size:14px;font-weight:600;color:var(--ink);margin:18px 0 6px}
+label .opt{font-weight:400;color:var(--muted)}
+input,select,textarea,.btn{scroll-margin:96px}
+input,select,textarea{width:100%;font:inherit;font-size:16px;color:var(--ink);background:var(--field);border:1.5px solid var(--line);border-radius:8px;padding:11px 12px;-webkit-appearance:none;appearance:none}
+select{background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 18px) 50%,calc(100% - 12px) 50%;background-size:6px 6px;background-repeat:no-repeat;padding-right:34px}
+textarea{min-height:64px;resize:vertical}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+button:focus-visible,summary:focus-visible,a:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.mono{font-family:var(--mono)}
+.row{display:flex;gap:8px;align-items:stretch}
+.row>*{flex:1;min-width:0}
+
+/* activity chips read like inspection tags */
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1.5px solid var(--line);background:var(--field);color:var(--ink);border-radius:8px;padding:8px 10px;font:inherit;font-size:14px;text-align:left;cursor:pointer;min-width:0;position:relative}
+.chip b{font:800 19px/1.05 var(--head);display:block;letter-spacing:.02em}
+.chip small{color:var(--muted);font-size:11.5px;line-height:1.2;display:block;margin-top:2px}
+.chip.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.chip.on small{color:var(--on-accent);opacity:.8}
+.chip.on::after{content:"";position:absolute;top:8px;right:8px;width:7px;height:12px;border:solid var(--on-accent);border-width:0 2.5px 2.5px 0;transform:rotate(45deg)}
+.acts{display:grid;grid-template-columns:repeat(3,1fr)}
+.mini{font-size:13px;padding:6px 10px;border-radius:99px}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1.5px solid var(--accent);border-radius:8px;padding:12px 16px;font:700 18px/1.1 var(--head);letter-spacing:.01em;background:var(--accent);color:var(--on-accent);cursor:pointer;text-decoration:none}
+.btn.sec{background:transparent;color:var(--ink);border-color:var(--line)}
+.btn.danger{background:transparent;color:var(--danger);border-color:var(--danger)}
+.btn.small{font-size:15px;padding:8px 12px}
+.btn.block{width:100%}
+.btn:disabled{opacity:.45}
+.btn:active{transform:translateY(1px)}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+.btns .btn{flex:1}
+.link{background:none;border:0;padding:0;font:inherit;font-size:14px;color:var(--muted);text-decoration:underline;cursor:pointer;margin-top:14px}
+.datewrap{position:relative;flex:0 0 52px}
+.datewrap .btn{width:100%;height:100%;padding:0}
+.datewrap input{position:absolute;inset:0;opacity:0;width:100%;height:100%;padding:0}
+.hint{font-size:13.5px;color:var(--muted);margin-top:6px}
+
+fieldset{border:1.5px solid var(--line);border-radius:12px;padding:2px 14px 14px;margin:22px 0 0;background:var(--card)}
+legend{font:700 19px/1 var(--head);padding:0 6px;margin-left:-6px}
+
+/* row meter: the five rows of the CAP 741 page, and where this entry lands */
+.fit{margin-top:16px;padding:12px;border-radius:8px;background:var(--field);border:1.5px solid var(--line);font-size:14px}
+.fit.bad{border-color:var(--danger)}
+.fit .msg{display:flex;gap:8px;align-items:baseline}
+.fit .msg b{font:700 17px/1.2 var(--head)}
+.fit.ok .msg b{color:var(--ok)}.fit.spill .msg b{color:var(--accent-ink)}.fit.bad .msg b{color:var(--danger)}
+.meter{display:grid;grid-template-columns:repeat(5,1fr);gap:3px;margin:10px 0 6px}
+.meter i{height:12px;border-radius:2px;border:1.5px solid var(--line);background:transparent}
+.meter i.used{background:repeating-linear-gradient(135deg,var(--line) 0 3px,transparent 3px 6px)}
+.meter i.this{background:var(--accent);border-color:var(--accent)}
+.fit.bad .meter i.this{background:var(--danger);border-color:var(--danger)}
+.fit .sub{color:var(--muted);font-size:13px}
+
+.list{display:flex;flex-direction:column;gap:8px}
+.item{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;gap:10px;align-items:center;cursor:pointer}
+.item .main{flex:1;min-width:0}
+.item .t{font-weight:600}
+.item .t.mono{font-weight:700}
+.item .s{font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.badge{font:700 13px/1 var(--head);padding:5px 8px;border-radius:4px;background:var(--warn-soft);color:var(--warn);white-space:nowrap}
+.empty{color:var(--muted);text-align:center;padding:30px 10px}
+.warnbox{border-left:4px solid var(--danger);background:var(--card);border-radius:4px;padding:9px 12px;font-size:14px;margin:10px 0}
+.check{display:flex;gap:10px;align-items:center;font-size:15px;margin-top:14px;color:var(--ink);font-weight:500}
+.check input{width:22px;height:22px;-webkit-appearance:auto;appearance:auto;accent-color:var(--accent);flex:0 0 auto;margin:0}
+.seg{display:inline-flex;border:1.5px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:transparent;color:var(--ink);font:600 15px/1 var(--body);padding:10px 14px;cursor:pointer}
+.seg button+button{border-left:1.5px solid var(--line)}
+.seg button.on{background:var(--accent);color:var(--on-accent)}
+
+/* logbook sheets: paper stays paper in dark mode, entries in pen ink */
+.sheet{background:var(--paper);color:#1f2624;border:1px solid var(--rule);border-radius:3px;margin:0 0 16px;box-shadow:0 1px 0 var(--rule),0 2px 0 -1px var(--paper),0 3px 0 -1px var(--rule)}
+.sheet .sh{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:10px 12px 9px;border-bottom:1.5px solid #1f2624}
+.sheet .sh .ty{font:700 18px/1.15 var(--head);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sheet .sh .at{font-size:13px;color:#4b5551;grid-column:1}
+.sheet .sh .at b{font-family:var(--mono)}
+.sheet .sh .pn{grid-column:2;grid-row:1/3;align-self:center;font:600 14px/1 var(--head);color:#4b5551;text-align:right}
+.sheet .sh .full{display:inline-block;margin-top:4px;background:#1f2624;color:var(--paper);padding:3px 6px;border-radius:3px;font-size:12px}
+.slot{display:grid;grid-template-columns:5.6em 1fr;border-bottom:1px solid var(--rule);min-height:58px;cursor:pointer}
+.slot.cont{border-top:1px dashed var(--rule);margin-top:-1px}
+.slot>div{padding:7px 10px}
+.slot .l{border-right:1px solid var(--rule);font-family:var(--mono);font-size:12px;color:var(--pen)}
+.slot .l b{display:block;font-size:13px}
+.slot .l .ac{color:#4b5551;font-family:var(--body);font-size:11.5px}
+.slot.cont .l{display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--pen)}
+.slot .x{color:var(--pen);font-size:13.5px;line-height:1.35;overflow:hidden;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical}
+.slot .m{font-size:12px;color:#4b5551;margin-top:3px}
+.slot .m.warn{color:var(--danger)}
+.slot.blank{cursor:default}
+.slot.blank .x,.slot.blank .l{color:#aab3ae}
+.sheet .sf{display:flex;align-items:center;gap:10px;padding:9px 12px;font-size:13px;color:#4b5551}
+.sheet .sf span{flex:1}
+.sheet .sf .btn.sec{color:#1f2624;border-color:#9aa5a0;font-size:15px;padding:7px 12px}
+
+/* bottom nav */
+nav{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--bar);display:flex;padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;border:0;background:none;color:var(--bar-muted);font:600 13px/1 var(--head);letter-spacing:.02em;padding:9px 2px 10px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;border-top:3px solid transparent}
+nav button svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+nav button.on{color:var(--bar-ink);border-top-color:var(--accent)}
+nav button.on svg{stroke:var(--accent)}
+
+dialog{border:0;border-radius:14px;padding:0;width:min(560px,94vw);max-height:90vh;background:var(--card);color:var(--ink)}
+dialog::backdrop{background:rgba(8,12,11,.6)}
+dialog .dh{padding:14px 16px;border-bottom:1px solid var(--line);font:700 21px/1.1 var(--head);display:flex;align-items:center}
+dialog .dh span{flex:1}
+dialog .db{padding:4px 16px 18px;overflow:auto;max-height:calc(90vh - 56px)}
+dialog p{margin:14px 0 0}
+.x-btn{border:0;background:none;font-size:26px;line-height:1;color:var(--muted);cursor:pointer;padding:0 4px}
+#toast{position:fixed;left:50%;bottom:calc(88px + env(safe-area-inset-bottom));transform:translate(-50%,8px);background:var(--bar);color:var(--bar-ink);padding:11px 16px;border-radius:8px;border-left:4px solid var(--accent);font-size:14px;max-width:90vw;z-index:20;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:5px 14px;font-size:14px}
+.kv dt{color:var(--muted)}.kv dd{margin:0}
+code{font-family:var(--mono);font-size:13px;background:var(--field);padding:1px 5px;border-radius:4px;border:1px solid var(--line)}
+
+/* Dropbox set-up guide */
+.guide{border:1.5px solid var(--line);border-radius:10px;background:var(--field);margin-top:14px}
+.guide summary{cursor:pointer;padding:12px 14px;font:700 17px/1.2 var(--head);list-style:none;display:flex;align-items:center;gap:8px}
+.guide summary::-webkit-details-marker{display:none}
+.guide summary::before{content:"?";flex:0 0 22px;height:22px;border-radius:50%;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font-size:15px}
+.guide summary::after{content:"Show";margin-left:auto;font:500 13px var(--body);color:var(--muted)}
+.guide[open] summary::after{content:"Hide"}
+ol.steps{list-style:none;counter-reset:s;margin:0;padding:0 14px 6px}
+ol.steps>li{counter-increment:s;position:relative;padding:0 0 16px 40px;font-size:14.5px}
+ol.steps>li::before{content:counter(s);position:absolute;left:0;top:-1px;width:27px;height:27px;border-radius:50%;border:1.5px solid var(--accent);display:grid;place-items:center;font:700 15px/1 var(--head);color:var(--accent-ink);background:var(--card)}
+ol.steps>li::after{content:"";position:absolute;left:13px;top:28px;bottom:2px;width:1.5px;background:var(--line)}
+ol.steps>li:last-child::after{display:none}
+ol.steps>li.done::before{content:"✓";background:var(--accent);color:var(--on-accent)}
+ol.steps>li.now::before{background:var(--accent-soft)}
+ol.steps b{display:block;font:700 16.5px/1.25 var(--head);margin-bottom:2px}
+.copy{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.copy button{font:500 13px var(--mono);border:1.5px dashed var(--accent);background:transparent;color:var(--ink);border-radius:6px;padding:6px 9px;cursor:pointer}
+.copy button.done{border-style:solid;background:var(--accent-soft)}
+
+/* autocomplete from the CAA lists */
+.sug-wrap{position:relative}
+.sug{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:30;background:var(--card);border:1.5px solid var(--accent);border-radius:8px;max-height:min(300px,45vh);overflow:auto;box-shadow:0 8px 24px rgba(8,12,11,.25);margin:0;padding:4px;list-style:none}
+.sug[hidden]{display:none}
+.sug li{padding:8px 10px;border-radius:6px;cursor:pointer;line-height:1.3}
+.sug li b{display:block;font-weight:600;font-size:15px}
+.sug li small{display:block;color:var(--muted);font-size:12.5px}
+.sug li.on,.sug li:hover{background:var(--accent-soft)}
+.sug .src{padding:6px 10px 4px;font-size:11.5px;color:var(--muted);cursor:default;background:none!important}
+
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media (max-width:340px){.acts{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><h1>CAP 741</h1><p>Section 3.1 maintenance experience</p></div>
+  <button class="pill off" id="syncPill" type="button">On phone</button>
+</header>
+
+<main>
+<!-- ============ NEW / EDIT ENTRY ============ -->
+<section class="view on" id="view-log">
+  <h2 id="formTitle">New entry</h2>
+
+  <label style="margin-top:0">Activity type</label>
+  <div class="chips acts" id="fActs"></div>
+
+  <label>Date</label>
+  <div class="row">
+    <input id="fDate" class="mono" placeholder="DDMMMYY e.g. 21OCT26" autocomplete="off" autocapitalize="characters">
+    <div class="datewrap"><button class="btn sec" type="button" tabindex="-1" aria-label="Pick date">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+    </button><input type="date" id="fDatePick" aria-label="Pick date"></div>
+  </div>
+  <div class="hint" id="dateHint"></div>
+
+  <label>Aircraft reg</label>
+  <select id="fAc"></select>
+
+  <label>ATA chapter</label>
+  <select id="fAta"></select>
+
+  <label>Job card number</label>
+  <input id="fJob" class="mono" autocomplete="off" autocapitalize="characters">
+
+  <fieldset>
+    <legend>Task detail</legend>
+    <label>Task <span class="opt">(what you did)</span></label>
+    <textarea id="fTask" rows="2" placeholder="e.g. Removed and refitted No.1 engine starter-generator"></textarea>
+    <label>Reason</label>
+    <input id="fReason" placeholder="e.g. Scheduled maintenance">
+    <div class="chips" id="reasonChips" style="margin-top:8px"></div>
+    <label>Manual reference</label>
+    <input id="fManual" placeholder="e.g. AMM 24-30-01">
+    <label>Specialist tooling</label>
+    <input id="fTooling" placeholder="e.g. Torque wrench 20–100 Nm">
+    <label>Challenges</label>
+    <textarea id="fChal" rows="2"></textarea>
+    <label>Result</label>
+    <textarea id="fResult" rows="2" placeholder="e.g. Ground run satisfactory, no leaks"></textarea>
+    <div class="fit" id="fitBox">Checking fit…</div>
+  </fieldset>
+
+  <label>Supervisor</label>
+  <input id="fSup" list="supList" placeholder="Pick or type a new name" autocomplete="off" autocapitalize="words">
+  <datalist id="supList"></datalist>
+  <div class="hint" id="supHint">Their licence number goes on the signature sheet, not on the entry.</div>
+
+  <div class="btns">
+    <button class="btn block" id="btnSave" type="button">Save entry</button>
+  </div>
+  <div class="btns" id="editBtns" style="display:none">
+    <button class="btn sec" id="btnDup" type="button">Duplicate</button>
+    <button class="btn sec" id="btnCancel" type="button">Cancel</button>
+    <button class="btn danger" id="btnDel" type="button">Delete</button>
+  </div>
+</section>
+
+<!-- ============ LOGBOOK ============ -->
+<section class="view" id="view-book">
+  <h2>Logbook</h2>
+  <div class="card">
+    <div class="row">
+      <div><label style="margin-top:0">Aircraft type</label><select id="xType"></select></div>
+      <div><label style="margin-top:0">ATA</label><select id="xAta"></select></div>
+    </div>
+    <label class="check"><input type="checkbox" id="xSig" checked> Include supervisor signature sheet</label>
+    <div id="xWarn"></div>
+    <div class="btns"><button class="btn block" id="btnExport" type="button">Export PDF</button></div>
+    <div class="hint" id="xSummary"></div>
+  </div>
+  <div id="bookList"></div>
+</section>
+
+<!-- ============ AIRCRAFT ============ -->
+<section class="view" id="view-ac">
+  <h2>Aircraft</h2>
+  <div class="list" id="acList"></div>
+  <div class="btns"><button class="btn block" id="btnAddAc" type="button">Add aircraft</button></div>
+</section>
+
+<!-- ============ SUPERVISORS ============ -->
+<section class="view" id="view-sup">
+  <h2>Supervisors</h2>
+  <div class="list" id="supListView"></div>
+  <div class="btns"><button class="btn block" id="btnAddSup" type="button">Add supervisor</button></div>
+</section>
+
+<!-- ============ SETTINGS ============ -->
+<section class="view" id="view-set">
+  <h2>Settings</h2>
+  <div class="card">
+    <label style="margin-top:0">Logbook owner's name <span class="opt">(printed on every page)</span></label>
+    <input id="sOwner" autocapitalize="words">
+  </div>
+
+  <h3>Pages and printing</h3>
+  <div class="card">
+    <label class="check" style="margin-top:0"><input type="checkbox" id="sAskPrint"> Ask to print when a page fills up</label>
+    <div class="hint">A page holds five rows for one aircraft type and one ATA chapter. When the last row is used you're offered a PDF of just that page, ready to sign.</div>
+    <label>Long entries spill into the rows below. Mark the other columns of those rows with</label>
+    <div class="seg" id="sMark"><button type="button" data-m="&quot;">" ditto</button><button type="button" data-m="–">– dash</button></div>
+  </div>
+
+  <h3>Dropbox sync</h3>
+  <div class="card" id="dbxCard"></div>
+
+  <h3>Backup</h3>
+  <div class="card">
+    <div class="hint" style="margin-top:0">A backup file holds every entry, aircraft and supervisor. Importing merges it in, and newer data is never overwritten by older data.</div>
+    <div class="btns">
+      <button class="btn sec" id="btnBackup" type="button">Save backup</button>
+      <button class="btn sec" id="btnImport" type="button">Import backup</button>
+    </div>
+    <input type="file" id="importFile" accept="application/json,.json" hidden>
+  </div>
+
+  <h3>PDF template</h3>
+  <div class="card">
+    <div id="tplStatus" class="hint" style="margin-top:0"></div>
+    <div class="btns">
+      <button class="btn sec" id="btnTpl" type="button">Use a different CAP 741 PDF</button>
+      <button class="btn sec" id="btnTplReset" type="button">Reset</button>
+    </div>
+    <input type="file" id="tplFile" accept="application/pdf,.pdf" hidden>
+  </div>
+
+  <h3>About</h3>
+  <div class="card hint" style="margin:0">Entries are typed into the CAA's own CAP 741 Section 3.1 pages (Issue 4). Supervisors sign and stamp in ink; you sign each page. Data stays on this phone and in your own Dropbox.</div>
+</section>
+</main>
+
+<nav id="nav">
+  <button data-v="log" class="on" type="button"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Entry</button>
+  <button data-v="book" type="button"><svg viewBox="0 0 24 24"><path d="M4 4h11a3 3 0 0 1 3 3v13H7a3 3 0 0 1-3-3z"/><path d="M8 9h6M8 13h6"/></svg>Logbook</button>
+  <button data-v="ac" type="button"><svg viewBox="0 0 24 24"><path d="M3 9h18M12 9v4M12 13l-5 3M12 13l5 3M9 6h6"/><circle cx="12" cy="18" r="1.5"/></svg>Aircraft</button>
+  <button data-v="sup" type="button"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>Supervisors</button>
+  <button data-v="set" type="button"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Settings</button>
+</nav>
+
+<dialog id="modal"><div class="dh"><span id="mTitle"></span><button class="x-btn" id="mClose" type="button" aria-label="Close">×</button></div><div class="db" id="mBody"></div></dialog>
+<div id="toast" role="status"></div>
+
+<script src="pdf-lib.min.js"></script>
+<script>
+'use strict';
+/* =====================================================================
+   CONFIG — paste your Dropbox App key between the quotes (or enter it
+   in Settings on the phone). Leave blank to run without Dropbox.
+   ===================================================================== */
+const DROPBOX_APP_KEY = '';
+const DBX_PATH = '/cap741-log.json';
+
+/* ---------- reference data ---------- */
+const ACTS = [
+  ['LOC','Location'],['FOT','Functional / Op test'],['SGH','Service & ground handling'],
+  ['R/I','Removal / Installation'],['MEL','Min. equipment list'],['TS','Troubleshooting'],
+  ['REP','Repair'],['EW','Electrical / Wiring'],['MOD','Modification']
+];
+const ATA = [
+  ['05','Time Limits/Maintenance Checks'],['06','Dimensions and Areas'],['07','Lifting and Shoring'],['08','Levelling and Weighing'],
+  ['09','Towing and Taxiing'],['10','Parking, Mooring, Storage'],['11','Placards and Markings'],['12','Servicing'],
+  ['18','Vibration and Noise Analysis'],['20','Standard Practices - Airframe'],['21','Air Conditioning'],['22','Auto Flight'],
+  ['23','Communications'],['24','Electrical Power'],['25','Equipment/Furnishings'],['26','Fire Protection'],['27','Flight Controls'],
+  ['28','Fuel'],['29','Hydraulic Power'],['30','Ice and Rain Protection'],['31','Indicating/Recording Systems'],['32','Landing Gear'],
+  ['33','Lights'],['34','Navigation'],['35','Oxygen'],['36','Pneumatic'],['37','Vacuum'],['38','Water/Waste'],
+  ['39','Electrical/Electronic Panels'],['44','Cabin Systems'],['45','Central Maintenance System'],['46','Information Systems'],
+  ['49','Airborne Auxiliary Power'],['51','Standard Practices and Structures'],['52','Doors'],['53','Fuselage'],['54','Nacelles/Pylons'],
+  ['55','Stabilisers'],['56','Windows'],['57','Wings'],['60','Standard Practices - Propeller/Rotor'],['61','Propellers'],
+  ['62','Main Rotor'],['63','Main Rotor Drive'],['64','Tail Rotor'],['65','Tail Rotor Drive'],['66','Folding Blades/Pylon'],
+  ['67','Rotors Flight Control'],['70','Standard Practices - Engine'],['71','Power Plant'],['72','Engine'],['73','Engine Fuel and Control'],
+  ['74','Ignition'],['75','Air'],['76','Engine Controls'],['77','Engine Indicating'],['78','Exhaust'],['79','Oil'],['80','Starting'],
+  ['81','Turbines'],['82','Water Injection'],['83','Accessory Gearboxes'],['84','Propulsion Augmentation'],['85','Reciprocating Engine']
+];
+const ATA_NAME = Object.fromEntries(ATA);
+const REASONS = ['Scheduled maintenance','Defect rectification','MEL rectification','Component change (life)','Modification / SB','AD compliance'];
+const MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+
+/* ---------- template geometry (points, measured from top of the A4-landscape CAA page) ---------- */
+const TASK = {
+  cols:{act:[32.2,81.1],date:[81.1,137.8],reg:[137.8,201.5],job:[201.5,279.5],task:[279.5,633.8],sup:[633.8,803.5]},
+  rows:[140.0,205.7,276.2,347.6,418.0,482.0],
+  type:{x:144,base:83.5,max:452}, ata:{x:556,base:83.5,max:770}, owner:{x:218,base:528.5,max:412}
+};
+const SIG = {
+  cols:{name:[32.2,237.0],sig:[237.0,407.1],mro:[407.1,555.9],stamp:[555.9,612.6],cat:[612.6,662.3],lic:[662.3,804.8]},
+  rows:[123.7,159.1,194.8,236.9,279.6,322.2,357.5,392.9,428.2,463.6,500.0],
+  owner:{x:218,base:524.5,max:412}
+};
+const ROWS_PER_PAGE = 5, SIGS_PER_PAGE = 10, PAD = 3;
+const TASK_W = TASK.cols.task[1]-TASK.cols.task[0]-PAD*2;
+const TASK_H = Math.min(...TASK.rows.slice(1).map((r,i)=>r-TASK.rows[i])) - PAD*2;
+const SIZES = [8,7.5,7,6.5,6];
+const TASK_SIZES = [8,7.5,7];   // task text never shrinks below 7pt — it spills into the next row instead
+
+/* ---------- tiny helpers ---------- */
+const $ = id => document.getElementById(id);
+const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36)+Math.random().toString(36).slice(2));
+const now = () => Date.now();
+const live = a => a.filter(x=>!x.deleted);
+function toast(msg,ms=2600){const t=$('toast');t.textContent=msg;t.classList.add('on');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('on'),ms);}
+function todayISO(){const d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);}
+function fmtD(iso){if(!iso)return'';const [y,m,d]=iso.split('-');return d+MONTHS[+m-1]+y.slice(2);}
+function parseD(s){
+  s=String(s||'').trim().toUpperCase(); if(!s) return null;
+  let d,m,y,x;
+  if((x=s.match(/^(\d{1,2})\s*-?\s*([A-Z]{3})\s*-?\s*(\d{2}|\d{4})$/))){d=+x[1];m=MONTHS.indexOf(x[2])+1;y=+x[3];}
+  else if((x=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/))){y=+x[1];m=+x[2];d=+x[3];}
+  else if((x=s.match(/^(\d{1,2})[\/.\- ](\d{1,2})[\/.\- ](\d{2}|\d{4})$/))){d=+x[1];m=+x[2];y=+x[3];}
+  else if((x=s.match(/^(\d{2})(\d{2})(\d{2}|\d{4})$/))){d=+x[1];m=+x[2];y=+x[3];}
+  else return null;
+  if(!m) return null;
+  if(y<100){const cy=new Date().getFullYear()%100;y+= y<=cy?2000:1900;}
+  const dt=new Date(Date.UTC(y,m-1,d));
+  if(dt.getUTCFullYear()!==y||dt.getUTCMonth()!==m-1||dt.getUTCDate()!==d) return null;
+  return dt.toISOString().slice(0,10);
+}
+function typeLabel(ac){
+  if(!ac) return 'Unknown aircraft';
+  if(ac.typeOverride) return ac.typeOverride;
+  const base=[ac.make,ac.model].filter(Boolean).join(' ');
+  return ac.engine ? `${base} (${ac.engine})` : base || ac.reg;
+}
+const ataLabel = c => c ? `${c} - ${ATA_NAME[c]||''}` : '';
+const groupKey = e => e.ata+'|'+typeLabel(acById(e.aircraftId));
+const contMark = () => S.settings.contMark||'"';
+const askPrintOn = () => S.settings.askPrint!==false;
+
+/* ---------- IndexedDB key/value store ---------- */
+const idb = (()=>{
+  let dbp;
+  const open=()=>dbp||(dbp=new Promise((res,rej)=>{const r=indexedDB.open('cap741',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);}));
+  const tx=async(mode,fn)=>{const db=await open();return new Promise((res,rej)=>{const t=db.transaction('kv',mode);const st=t.objectStore('kv');const r=fn(st);t.oncomplete=()=>res(r&&r.result);t.onerror=()=>rej(t.error);});};
+  return {get:k=>tx('readonly',s=>s.get(k)),set:(k,v)=>tx('readwrite',s=>s.put(v,k)),del:k=>tx('readwrite',s=>s.delete(k))};
+})();
+
+/* ---------- state ---------- */
+let S, DEV;               // S = synced logbook data, DEV = this-device-only data (tokens)
+let editingId = null;
+const blank = () => ({v:1,settings:{ownerName:'',updatedAt:0},aircraft:[],supervisors:[],entries:[]});
+const acById = id => S.aircraft.find(a=>a.id===id);
+const supById = id => S.supervisors.find(s=>s.id===id);
+
+async function save(sync=true){
+  await idb.set('state',S);
+  if(sync) scheduleSync();
+}
+function upsert(list,obj){obj.updatedAt=now();const i=list.findIndex(x=>x.id===obj.id);if(i>=0)list[i]=obj;else list.push(obj);}
+function tombstone(list,id){const i=list.findIndex(x=>x.id===id);if(i>=0)list[i]={id,deleted:true,updatedAt:now()};}
+async function setSetting(k,v){S.settings={...S.settings,[k]:v,updatedAt:now()};await save();}
+
+function merge(a,b){
+  const out={v:1,settings:((b.settings?.updatedAt||0)>(a.settings?.updatedAt||0)?b.settings:a.settings)||blank().settings};
+  for(const k of ['aircraft','supervisors','entries']){
+    const m=new Map();
+    for(const x of [...(a[k]||[]),...(b[k]||[])]){const y=m.get(x.id);if(!y||(x.updatedAt||0)>(y.updatedAt||0))m.set(x.id,x);}
+    out[k]=[...m.values()];
+  }
+  return out;
+}
+
+/* ---------- PDF fonts & text layout (shared by fit checker and export) ---------- */
+let MF = null; // measuring fonts
+async function measureFonts(){
+  if(MF) return MF;
+  const d=await PDFLib.PDFDocument.create();
+  MF={r:await d.embedFont(PDFLib.StandardFonts.Helvetica),b:await d.embedFont(PDFLib.StandardFonts.HelveticaBold)};
+  return MF;
+}
+const encOK=new Map();
+function clean(str,font){
+  str=String(str??'').replace(/\r/g,'').replace(/\t/g,' ').replace(/[→]/g,'->').replace(/[≤]/g,'<=').replace(/[≥]/g,'>=').replace(/[   ]/g,' ');
+  let out='';
+  for(const ch of str){
+    if(ch==='\n'){out+=ch;continue;}
+    let ok=encOK.get(ch);
+    if(ok===undefined){try{font.widthOfTextAtSize(ch,10);ok=true;}catch(e){ok=false;}encOK.set(ch,ok);}
+    out+=ok?ch:'?';
+  }
+  return out;
+}
+function tokenize(segs,F){
+  const out=[];
+  for(const s of segs){
+    const parts=clean(s.t,F.r).split('\n');
+    parts.forEach((p,i)=>{ if(i>0) out.push({nl:true}); p.split(/ +/).filter(Boolean).forEach(w=>out.push({w,b:!!s.b})); });
+  }
+  return out;
+}
+function layout(tokens,size,maxW,F){
+  const lines=[[]];let cw=0;const sp=F.r.widthOfTextAtSize(' ',size);
+  const push=(w,b)=>{const ww=(b?F.b:F.r).widthOfTextAtSize(w,size);const line=lines[lines.length-1];const gap=line.length?sp:0;
+    if(cw+gap+ww<=maxW){line.push({w,b,x:cw+gap});cw+=gap+ww;return true;}return false;};
+  for(const t of tokens){
+    if(t.nl){lines.push([]);cw=0;continue;}
+    if(push(t.w,t.b)) continue;
+    if(lines[lines.length-1].length){lines.push([]);cw=0;}
+    if(push(t.w,t.b)) continue;
+    let piece='';            // single word wider than the cell: hard-break it
+    for(const ch of t.w){
+      const f=t.b?F.b:F.r;
+      if(f.widthOfTextAtSize(piece+ch,size)>maxW&&piece){lines[lines.length-1].push({w:piece,b:t.b,x:0});lines.push([]);piece='';}
+      piece+=ch;
+    }
+    if(piece){const f=t.b?F.b:F.r;lines[lines.length-1].push({w:piece,b:t.b,x:0});cw=f.widthOfTextAtSize(piece,size);}
+  }
+  if(lines.length>1&&!lines[lines.length-1].length) lines.pop();
+  return lines;
+}
+function fit(segs,w,h,F,sizes=SIZES){
+  const toks=tokenize(segs,F);
+  let last;
+  for(const s of sizes){
+    const lh=s*1.16, lines=layout(toks,s,w,F), maxLines=Math.max(1,Math.floor((h+lh-s)/lh));
+    last={size:s,lh,lines,maxLines,ok:lines.length<=maxLines};
+    if(last.ok) return last;
+  }
+  return last;
+}
+function taskSegs(e){
+  const segs=[];
+  if(e.task) segs.push({t:e.task.trim()+' '});
+  const add=(lab,v)=>{if(v&&String(v).trim()){segs.push({t:lab,b:true},{t:String(v).trim()+' '});}};
+  add('Reason: ',e.reason);add('Ref: ',e.manual);add('Tooling: ',e.tooling);add('Challenges: ',e.challenges);add('Result: ',e.result);
+  return segs;
+}
+/* How many page rows an entry's task text needs. Prefer one row (shrinking the font a little),
+   otherwise spill into rows below at the largest size that keeps the row count lowest.
+   Returns {k rows, size, lh, per (lines per row), lines, ok}. ok=false means it overflows a whole page. */
+const layCache=new Map();
+function entryLayout(e){
+  const segs=taskSegs(e),key=JSON.stringify(segs);
+  if(layCache.has(key)) return layCache.get(key);
+  const toks=tokenize(segs,MF);
+  const by=TASK_SIZES.map(s=>{const lh=s*1.16;return {size:s,lh,lines:layout(toks,s,TASK_W,MF),per:Math.max(1,Math.floor((TASK_H+lh-s)/lh))};});
+  let r=null;
+  for(let k=1;k<=ROWS_PER_PAGE&&!r;k++) for(const b of by) if(b.lines.length<=k*b.per){r={...b,k,ok:true};break;}
+  if(!r){
+    const b=by[by.length-1],cap=ROWS_PER_PAGE*b.per,lines=b.lines.slice(0,cap);
+    const l=lines[cap-1];if(l&&l.length)lines[cap-1]=[...l.slice(0,-1),{...l[l.length-1],w:l[l.length-1].w+'...'}];
+    r={...b,lines,k:ROWS_PER_PAGE,ok:false,total:b.lines.length,cap};
+  }
+  if(layCache.size>400) layCache.clear();
+  layCache.set(key,r);return r;
+}
+const rowLines=(L,j)=>L.lines.slice(j*L.per,(j+1)*L.per);
+const linesText=ls=>ls.map(l=>l.map(t=>t.w).join(' ')).join(' ');
+
+/* ---------- page packing: one aircraft type + one ATA per page, five rows, entries never split across pages ---------- */
+function groupPages(entries){
+  const groups=new Map();
+  for(const e of entries){
+    const key=groupKey(e);
+    if(!groups.has(key)) groups.set(key,{key,ata:e.ata,type:typeLabel(acById(e.aircraftId)),entries:[]});
+    groups.get(key).entries.push(e);
+  }
+  const arr=[...groups.values()].sort((a,b)=>(+a.ata- +b.ata)||a.type.localeCompare(b.type));
+  const pages=[];
+  for(const g of arr){
+    g.entries.sort((a,b)=>a.date.localeCompare(b.date)||(a.createdAt||0)-(b.createdAt||0));
+    const gp=[];let pg=null;
+    for(const e of g.entries){
+      const L=entryLayout(e);
+      if(!pg||pg.used+L.k>ROWS_PER_PAGE){pg={key:g.key,ata:g.ata,type:g.type,items:[],used:0};gp.push(pg);}
+      pg.items.push({e,slot:pg.used,L});pg.used+=L.k;
+    }
+    gp.forEach((p,i)=>{p.n=i+1;p.of=gp.length;p.full=p.used>=ROWS_PER_PAGE||i<gp.length-1;p.entries=p.items.map(x=>x.e);});
+    pages.push(...gp);
+  }
+  return pages;
+}
+const pageSig = p => p.key+':'+p.entries.map(e=>e.id).join(',');
+
+/* ---------- PDF export ---------- */
+async function templateBytes(){
+  const custom=await idb.get('template');
+  if(custom) return custom;
+  const r=await fetch('cap741-template.pdf');
+  if(!r.ok) throw new Error('Template PDF not found next to the app');
+  return {bytes:new Uint8Array(await r.arrayBuffer()),taskPage:1,sigPage:2,name:'Built-in (CAP 741 Issue 4)'};
+}
+async function buildPdf(pages,withSig){
+  const {PDFDocument,StandardFonts,rgb}=PDFLib;
+  const T=await templateBytes();
+  const tpl=await PDFDocument.load(T.bytes);
+  const doc=await PDFDocument.create();
+  const F={r:await doc.embedFont(StandardFonts.Helvetica),b:await doc.embedFont(StandardFonts.HelveticaBold)};
+  const INK=rgb(0.07,0.11,0.33);
+  const owner=S.settings.ownerName||'';
+  const H=pg=>pg.getHeight();
+  const entries=pages.flatMap(p=>p.entries);
+
+  const line=(pg,text,x,base,max,size=10,bold=false)=>{
+    text=clean(text,F.r);const f=bold?F.b:F.r;let s=size;
+    while(s>6&&f.widthOfTextAtSize(text,s)>max-x) s-=0.5;
+    pg.drawText(text,{x,y:H(pg)-base,size:s,font:f,color:INK});
+  };
+  const drawBox=(pg,segs,x0,x1,top,bottom,{valign='top',sizes=SIZES}={})=>{
+    const w=x1-x0-PAD*2,h=bottom-top-PAD*2;
+    const r=fit(segs,w,h,F,sizes);
+    let lines=r.lines;
+    if(!r.ok){lines=lines.slice(0,r.maxLines);const l=lines[lines.length-1];if(l&&l.length){l[l.length-1]={...l[l.length-1],w:l[l.length-1].w+'...'};}}
+    const blockH=r.size+(lines.length-1)*r.lh;
+    let y0=top+PAD+r.size*0.82;
+    if(valign==='middle') y0=top+(bottom-top-blockH)/2+r.size*0.82;
+    if(valign==='bottom') y0=bottom-PAD-blockH+r.size*0.82;
+    lines.forEach((ln,i)=>ln.forEach(t=>pg.drawText(t.w,{x:x0+PAD+t.x,y:H(pg)-(y0+i*r.lh),size:r.size,font:t.b?F.b:F.r,color:INK})));
+  };
+  const drawLines=(pg,lines,L,x0,top)=>lines.forEach((ln,i)=>ln.forEach(t=>
+    pg.drawText(t.w,{x:x0+PAD+t.x,y:H(pg)-(top+PAD+L.size*0.82+i*L.lh),size:L.size,font:t.b?F.b:F.r,color:INK})));
+  // ditto / dash centred in a continuation cell; a quote mark sits high, so drop its baseline further
+  const drawMark=(pg,[x0,x1],top,bot)=>{
+    const m=contMark(),s=13,w=F.r.widthOfTextAtSize(m,s),drop=m==='"'?0.62:0.3;
+    pg.drawText(m,{x:(x0+x1)/2-w/2,y:H(pg)-((top+bot)/2+s*drop),size:s,font:F.r,color:INK});
+  };
+
+  // Signature sheet(s) first
+  if(withSig){
+    const ids=[...new Set(entries.map(e=>e.supervisorId).filter(Boolean))];
+    const sups=ids.map(supById).filter(Boolean).sort((a,b)=>a.name.localeCompare(b.name));
+    for(let p=0;p<Math.max(1,Math.ceil(sups.length/SIGS_PER_PAGE));p++){
+      const [pg]=await doc.copyPages(tpl,[T.sigPage-1]);doc.addPage(pg);
+      sups.slice(p*SIGS_PER_PAGE,(p+1)*SIGS_PER_PAGE).forEach((s,i)=>{
+        const top=SIG.rows[i],bot=SIG.rows[i+1],o={valign:'middle',sizes:[9,8.5,8,7.5,7,6.5,6]};
+        drawBox(pg,[{t:s.name}],...SIG.cols.name,top,bot,o);
+        drawBox(pg,[{t:s.mro||''}],...SIG.cols.mro,top,bot,o);
+        drawBox(pg,[{t:s.cat||''}],...SIG.cols.cat,top,bot,o);
+        drawBox(pg,[{t:s.licNo||''}],...SIG.cols.lic,top,bot,o);
+      });
+      if(owner) line(pg,owner,SIG.owner.x,SIG.owner.base,SIG.owner.max,10);
+    }
+  }
+  // Task pages
+  for(const P of pages){
+    const [pg]=await doc.copyPages(tpl,[T.taskPage-1]);doc.addPage(pg);
+    line(pg,P.type,TASK.type.x,TASK.type.base,TASK.type.max,10);
+    line(pg,ataLabel(P.ata),TASK.ata.x,TASK.ata.base,TASK.ata.max,10);
+    if(owner) line(pg,owner,TASK.owner.x,TASK.owner.base,TASK.owner.max,10);
+    P.items.forEach(({e,slot,L})=>{
+      const C=TASK.cols,ac=acById(e.aircraftId),sup=supById(e.supervisorId);
+      for(let j=0;j<L.k;j++){
+        const top=TASK.rows[slot+j],bot=TASK.rows[slot+j+1];
+        if(j===0){
+          drawBox(pg,[{t:(e.acts||[]).join('\n')}],...C.act,top,bot);
+          drawBox(pg,[{t:fmtD(e.date)}],...C.date,top,bot);
+          drawBox(pg,[{t:ac?ac.reg:''}],...C.reg,top,bot);
+          drawBox(pg,[{t:e.job||''}],...C.job,top,bot);
+          if(sup) drawBox(pg,[{t:sup.name}],C.sup[0],C.sup[1],top,bot,{valign:'bottom',sizes:[8,7.5,7,6.5,6]});
+        }else{
+          for(const c of ['act','date','reg','job','sup']) drawMark(pg,C[c],top,bot);
+        }
+        drawLines(pg,rowLines(L,j),L,C.task[0],top);
+      }
+    });
+  }
+  doc.setTitle('CAP 741 Section 3.1'+(owner?' - '+owner:''));
+  doc.setCreator('CAP 741 Log');
+  return doc.save();
+}
+async function deliver(bytes,name,mime='application/pdf'){
+  const file=new File([bytes],name,{type:mime});
+  if(navigator.canShare&&navigator.canShare({files:[file]})){
+    try{await navigator.share({files:[file],title:name});return;}
+    catch(e){if(e.name==='AbortError')return;}
+  }
+  const url=URL.createObjectURL(file);const a=document.createElement('a');
+  a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),60000);
+}
+async function exportPages(pages,withSig,btn){
+  const label=btn?.textContent;
+  if(btn){btn.disabled=true;btn.textContent='Building PDF…';}
+  try{
+    const bytes=await buildPdf(pages,withSig);
+    const who=(S.settings.ownerName||'logbook').replace(/[^A-Za-z0-9]+/g,'-');
+    const what=pages.length===1?`ATA${pages[0].ata}-${pages[0].type.replace(/[^A-Za-z0-9]+/g,'-')}-p${pages[0].n}`:'S3.1';
+    await deliver(bytes,`CAP741-${what}-${who}-${fmtD(todayISO())}.pdf`);
+  }catch(err){console.error(err);alert('PDF export failed: '+err.message);}
+  if(btn){btn.disabled=false;btn.textContent=label;}
+}
+
+/* ---------- navigation ---------- */
+function show(v){
+  document.querySelectorAll('.view').forEach(s=>s.classList.toggle('on',s.id==='view-'+v));
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+  ({book:renderBook,ac:renderAc,sup:renderSups,set:renderSettings}[v]||(()=>{}))();
+  window.scrollTo(0,0);
+}
+$('nav').addEventListener('click',e=>{const b=e.target.closest('button');if(b)show(b.dataset.v);});
+
+/* ---------- modal ---------- */
+const modal=$('modal');
+function openModal(title,html,onReady){$('mTitle').textContent=title;$('mBody').innerHTML=html;modal.showModal();onReady&&onReady();}
+const closeModal=()=>modal.close();
+$('mClose').onclick=closeModal;
+
+/* ---------- CAA lists: Part-66 type ratings and Part 145 organisations (data/*.json, built by tools/build-lists.py) ---------- */
+const LISTS={};
+const compact=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,'');
+const titleish=s=>s.replace(/\b[A-Z][A-Z]{3,}\b/g,w=>w[0]+w.slice(1).toLowerCase()).replace(/\(THE\)/,'(The)');
+function loadList(name){
+  return LISTS[name]||(LISTS[name]=fetch('data/'+name+'.json').then(r=>{if(!r.ok)throw new Error(r.status);return r.json();})
+    .then(d=>{
+      if(name==='part66-types'){
+        d.items=d.r.map(([hi,model,desig,ei])=>({make:d.h[hi],model,desig,rating:d.e[ei],hay:compact(model+' '+desig+' '+d.e[ei]+' '+d.h[hi]),m:compact(model+' '+desig)}));
+        d.ratings=d.e.map(rating=>({rating,hay:compact(rating)}));
+      }else d.items=d.r.map(([name,ref,town])=>({name,ref,town,hay:compact(name+' '+ref+' '+town)}));
+      return d;
+    }).catch(err=>{console.warn(name,err);delete LISTS[name];return null;}));
+}
+function search(items,q,rank,max=8){
+  const words=q.toLowerCase().split(/\s+/).map(compact).filter(Boolean);
+  if(!words.length) return [];
+  const hits=items.filter(it=>words.every(w=>it.hay.includes(w)));
+  return hits.map(it=>[rank(it,words[0]),it]).sort((a,b)=>a[0]-b[0]).slice(0,max).map(x=>x[1]);
+}
+/* Attach a suggestion list under an input. Typing still works freely; picking a row calls pick(item). */
+function attachSuggest(input,{list,find,row,pick}){
+  const wrap=document.createElement('div');wrap.className='sug-wrap';
+  input.parentNode.insertBefore(wrap,input);wrap.appendChild(input);
+  const ul=document.createElement('ul');ul.className='sug';ul.hidden=true;ul.setAttribute('role','listbox');wrap.appendChild(ul);
+  input.setAttribute('autocomplete','off');
+  let items=[],sel=-1,src='';
+  const close=()=>{ul.hidden=true;sel=-1;};
+  const paint=()=>{ul.querySelectorAll('li[data-i]').forEach(li=>li.classList.toggle('on',+li.dataset.i===sel));};
+  const choose=i=>{const it=items[i];if(!it)return;pick(it);close();};
+  input.addEventListener('input',async()=>{
+    const q=input.value.trim();
+    if(q.length<2){close();return;}
+    const d=await loadList(list);if(!d||input.value.trim()!==q) return;
+    items=find(d,q);src=d.source;sel=-1;
+    if(!items.length){close();return;}
+    ul.innerHTML=items.map((it,i)=>`<li data-i="${i}" role="option">${row(it)}</li>`).join('')+`<li class="src">From the ${esc(src)}</li>`;
+    ul.hidden=false;
+  });
+  ul.addEventListener('pointerdown',e=>e.preventDefault());   // keep focus so blur doesn't close before the tap lands
+  ul.addEventListener('click',e=>{const li=e.target.closest('li[data-i]');if(li)choose(+li.dataset.i);});
+  input.addEventListener('keydown',e=>{
+    if(ul.hidden) return;
+    if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();sel=(sel+(e.key==='ArrowDown'?1:-1)+items.length)%items.length;paint();}
+    else if(e.key==='Enter'&&sel>=0){e.preventDefault();choose(sel);}
+    else if(e.key==='Escape') close();
+  });
+  input.addEventListener('blur',()=>setTimeout(close,120));
+}
+const findTypes=(d,q)=>search(d.items,q,(it,w)=>it.m.startsWith(w)?0:it.m.includes(w)?1:2);
+const findRatings=(d,q)=>search(d.ratings,q,(it,w)=>it.hay.startsWith(w)?0:1);
+const findOrgs=(d,q)=>search(d.items,q,(it,w)=>compact(it.name).startsWith(w)?0:it.ref.endsWith(w)?0:1);
+const engineOf=rating=>(rating.match(/\(([^()]*)\)\s*$/)||[])[1]||'';
+
+/* ---------- ENTRY FORM ---------- */
+let acts=new Set();
+
+function renderActs(){
+  $('fActs').innerHTML=ACTS.map(([c,m])=>`<button type="button" class="chip${acts.has(c)?' on':''}" data-c="${c}" aria-pressed="${acts.has(c)}"><b>${c}</b><small>${m}</small></button>`).join('');
+}
+$('fActs').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;const c=b.dataset.c;acts.has(c)?acts.delete(c):acts.add(c);renderActs();saveDraft();});
+$('reasonChips').innerHTML=REASONS.map(r=>`<button type="button" class="chip mini">${r}</button>`).join('');
+$('reasonChips').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;$('fReason').value=b.textContent;onFormInput();});
+
+function fillAcSelect(sel){
+  const list=live(S.aircraft).sort((a,b)=>a.reg.localeCompare(b.reg));
+  $('fAc').innerHTML=`<option value="">Select aircraft…</option>`+list.map(a=>`<option value="${a.id}">${esc(a.reg)}  ${esc(typeLabel(a))}</option>`).join('')+`<option value="__new">Add new aircraft…</option>`;
+  if(sel!==undefined) $('fAc').value=sel;
+}
+function fillAtaSelect(){
+  $('fAta').innerHTML=`<option value="">Select ATA chapter…</option>`+ATA.map(([c,n])=>`<option value="${c}">${c} – ${esc(n)}</option>`).join('');
+}
+function fillSupList(){
+  $('supList').innerHTML=live(S.supervisors).sort((a,b)=>a.name.localeCompare(b.name)).map(s=>`<option value="${esc(s.name)}">`).join('');
+}
+let lastAc='';
+$('fAc').addEventListener('change',()=>{
+  if($('fAc').value==='__new'){fillAcSelect(lastAc);editAircraft(null,id=>{fillAcSelect(id);lastAc=id;saveDraft();updateFit();});}
+  else{lastAc=$('fAc').value;updateFit();}
+});
+$('fDatePick').addEventListener('change',()=>{const v=$('fDatePick').value;if(v){$('fDate').value=fmtD(v);onDateInput();}});
+$('fDate').addEventListener('input',onDateInput);
+$('fDate').addEventListener('blur',()=>{const iso=parseD($('fDate').value);if(iso)$('fDate').value=fmtD(iso);});
+function onDateInput(){
+  const iso=parseD($('fDate').value),h=$('dateHint');
+  if(!$('fDate').value.trim()){h.textContent='';return;}
+  if(!iso){h.innerHTML='<span style="color:var(--danger)">Not a valid date. Try 21OCT26 or 21/10/2026.</span>';return;}
+  if(iso>todayISO()){h.innerHTML='<span style="color:var(--danger)">That date is in the future</span>';return;}
+  $('fDatePick').value=iso;
+  h.textContent=new Date(iso+'T12:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  saveDraft();
+}
+function formEntry(){
+  return {acts:ACTS.map(a=>a[0]).filter(c=>acts.has(c)),date:parseD($('fDate').value),aircraftId:$('fAc').value,ata:$('fAta').value,
+    job:$('fJob').value.trim(),task:$('fTask').value.trim(),reason:$('fReason').value.trim(),manual:$('fManual').value.trim(),
+    tooling:$('fTooling').value.trim(),challenges:$('fChal').value.trim(),result:$('fResult').value.trim(),supName:$('fSup').value.trim()};
+}
+/* Where would this entry land? Rows already used on the last page of its type+ATA, or null if unknown. */
+function pageSpace(e){
+  if(!e.aircraftId||e.aircraftId==='__new'||!e.ata) return null;
+  const key=groupKey(e);
+  const pages=groupPages(live(S.entries).filter(x=>x.id!==editingId&&groupKey(x)===key));
+  const last=pages[pages.length-1];
+  return {used:last?last.used:0,n:last?last.n:1,of:pages.length,ata:e.ata,type:typeLabel(acById(e.aircraftId))};
+}
+async function updateFit(){
+  const box=$('fitBox');
+  if(!MF){box.textContent='Checking fit…';await measureFonts();}
+  const e=formEntry(),segs=taskSegs(e);
+  if(!segs.length){box.className='fit';box.innerHTML='<div class="msg"><b>Task detail box</b></div><div class="sub">Start typing and this shows how many rows of the page the entry will use.</div>';return;}
+  const L=entryLayout(e),sp=pageSpace(e);
+  let used=sp?sp.used:0,newPage=false;
+  if(sp&&used+L.k>ROWS_PER_PAGE){newPage=used>0;used=0;}
+  const cells=Array.from({length:ROWS_PER_PAGE},(_,i)=>`<i class="${i<used?'used':i<used+L.k?'this':''}"></i>`).join('');
+  let msg,sub,cls;
+  if(!L.ok){
+    const chars=segs.reduce((n,s)=>n+s.t.length,0),over=Math.ceil(chars*(1-L.cap/L.total));
+    cls='bad';msg='Too long for a whole page';sub=`Trim about ${over} characters. Anything past five rows is cut off.`;
+  }else if(L.k===1){
+    cls='ok';msg='Fits in one row';sub=`${L.size}pt text, ${L.lines.length} of ${L.per} lines.`;
+  }else{
+    cls='spill';msg=`Spills into ${L.k} rows`;
+    sub=`The rows below get ${contMark()==='"'?'ditto marks (")':'a dash (–)'} in the date, reg, job card and supervisor columns.`;
+  }
+  let where='';
+  if(sp){
+    const free=ROWS_PER_PAGE-used-Math.min(L.k,ROWS_PER_PAGE);
+    where=newPage?`<div class="sub">Not enough room left on ${esc(sp.type)} ATA ${sp.ata} page ${sp.n}, so this starts page ${sp.n+1}.</div>`
+      :`<div class="sub">${esc(sp.type)} ATA ${sp.ata} page ${sp.n}: ${free===0?'this fills the page.':`${free} ${free===1?'row':'rows'} left after this entry.`}</div>`;
+  }
+  box.className='fit '+cls;
+  box.innerHTML=`<div class="msg"><b>${msg}</b></div><div class="meter" aria-hidden="true">${cells}</div><div class="sub">${sub}</div>${where}`;
+}
+let fitT;
+function onFormInput(){clearTimeout(fitT);fitT=setTimeout(updateFit,120);saveDraft();}
+['fTask','fReason','fManual','fTooling','fChal','fResult','fJob','fSup','fAta'].forEach(id=>$(id).addEventListener('input',onFormInput));
+$('fAta').addEventListener('change',onFormInput);
+$('fSup').addEventListener('input',()=>{
+  const n=$('fSup').value.trim().toLowerCase();
+  const s=live(S.supervisors).find(x=>x.name.toLowerCase()===n);
+  $('supHint').textContent=!n?'Their licence number goes on the signature sheet, not on the entry.':
+    s?`${s.cat||'Licence cat. not set'}, ${s.licNo||'licence no. not set'}`:'New name. They will be added to your supervisor list when you save.';
+});
+
+let draftT;
+function saveDraft(){if(editingId)return;clearTimeout(draftT);draftT=setTimeout(()=>{const d=formEntry();d.dateText=$('fDate').value;idb.set('draft',d);},400);}
+
+function setForm(e,{keepDate=false}={}){
+  acts=new Set(e.acts||[]);renderActs();
+  if(!keepDate) $('fDate').value=e.date?fmtD(e.date):(e.dateText||fmtD(todayISO()));
+  fillAcSelect(e.aircraftId||'');lastAc=e.aircraftId||'';
+  $('fAta').value=e.ata||'';
+  $('fJob').value=e.job||'';$('fTask').value=e.task||'';$('fReason').value=e.reason||'';$('fManual').value=e.manual||'';
+  $('fTooling').value=e.tooling||'';$('fChal').value=e.challenges||'';$('fResult').value=e.result||'';
+  $('fSup').value=e.supName!==undefined?e.supName:(supById(e.supervisorId)?.name||'');
+  $('fSup').dispatchEvent(new Event('input'));
+  onDateInput();updateFit();
+}
+function newEntry(prefill){
+  editingId=null;$('formTitle').textContent='New entry';$('editBtns').style.display='none';$('btnSave').textContent='Save entry';
+  setForm(prefill||{});
+}
+function editEntry(id){
+  const e=S.entries.find(x=>x.id===id);if(!e)return;
+  editingId=id;$('formTitle').textContent='Edit entry';$('editBtns').style.display='flex';$('btnSave').textContent='Save changes';
+  show('log');setForm(e);
+}
+$('btnCancel').onclick=()=>{newEntry();show('book');};
+$('btnDup').onclick=()=>{const e=S.entries.find(x=>x.id===editingId);newEntry({...e,date:todayISO(),job:''});toast('Copied. Change what you need and save.');};
+$('btnDel').onclick=async()=>{if(!confirm('Delete this entry?'))return;tombstone(S.entries,editingId);await save();newEntry();toast('Entry deleted');show('book');};
+
+$('btnSave').onclick=async()=>{
+  const f=formEntry(),errs=[];
+  if(!f.acts.length) errs.push('activity type');
+  if(!f.date) errs.push('a valid date');
+  else if(f.date>todayISO()) errs.push('a date that isn\'t in the future');
+  if(!f.aircraftId||f.aircraftId==='__new') errs.push('aircraft');
+  if(!f.ata) errs.push('ATA chapter');
+  if(!f.task) errs.push('task description');
+  if(errs.length){toast('Please add: '+errs.join(', '),3500);return;}
+  let supId='',newSup=false;
+  if(f.supName){
+    let s=live(S.supervisors).find(x=>x.name.toLowerCase()===f.supName.toLowerCase());
+    if(!s){s={id:uid(),name:f.supName,cat:'',licNo:'',mro:''};upsert(S.supervisors,s);newSup=true;toast(`${f.supName} added to supervisors. Add their licence details later.`,3500);}
+    supId=s.id;
+  }
+  const fullBefore=new Set(groupPages(live(S.entries)).filter(p=>p.full).map(pageSig));
+  const old=editingId?S.entries.find(x=>x.id===editingId):null;
+  const e={id:editingId||uid(),createdAt:old?.createdAt||now(),acts:f.acts,date:f.date,aircraftId:f.aircraftId,ata:f.ata,job:f.job,task:f.task,
+    reason:f.reason,manual:f.manual,tooling:f.tooling,challenges:f.challenges,result:f.result,supervisorId:supId};
+  upsert(S.entries,e);
+  await save();
+  fillSupList();
+  const filled=groupPages(live(S.entries)).filter(p=>p.full&&p.key===groupKey(e)&&!fullBefore.has(pageSig(p)));
+  if(editingId){toast('Entry updated');newEntry();show('book');}
+  else{
+    await idb.del('draft');
+    if(!f.supName) toast('Saved. No supervisor yet, so add one before printing.',3500); else if(!newSup) toast('Entry saved');
+    // keep date, aircraft, ATA and supervisor for the next task on the same job
+    newEntry({date:f.date,aircraftId:f.aircraftId,ata:f.ata,supName:f.supName});
+  }
+  if(filled.length&&askPrintOn()) askToPrint(filled);
+};
+
+/* ---------- page-full prompt ---------- */
+function askToPrint(pages){
+  const p=pages[0],more=pages.length-1;
+  openModal('Page full',`
+    <p>${esc(p.type)}, ATA ${p.ata}, page ${p.n} has no rows left${more?` (plus ${more} more page${more>1?'s':''} for this type and chapter)`:''}.</p>
+    <p>Print it now so you and your supervisor can sign it while the work is fresh?</p>
+    <label class="check"><input type="checkbox" id="pkSig"> Include supervisor signature sheet</label>
+    <div class="btns"><button class="btn" id="pkGo" type="button">Export ${pages.length>1?'pages':'page'}</button><button class="btn sec" id="pkNo" type="button">Not now</button></div>
+    <button class="link" id="pkNever" type="button">Stop asking (turn back on in Settings)</button>`,
+  ()=>{
+    $('pkGo').onclick=async()=>{await exportPages(pages,$('pkSig').checked,$('pkGo'));closeModal();};
+    $('pkNo').onclick=closeModal;
+    $('pkNever').onclick=async()=>{await setSetting('askPrint',false);closeModal();toast('You won\'t be asked again. Pages can still be exported from the Logbook.',3500);};
+  });
+}
+
+/* ---------- AIRCRAFT ---------- */
+function renderAc(){
+  const list=live(S.aircraft).sort((a,b)=>a.reg.localeCompare(b.reg));
+  $('acList').innerHTML=list.length?list.map(a=>{
+    const n=live(S.entries).filter(e=>e.aircraftId===a.id).length;
+    return `<div class="item" data-id="${a.id}"><div class="main"><div class="t mono">${esc(a.reg)}</div><div class="s">${esc(typeLabel(a))}${a.serial?', s/n '+esc(a.serial):''}</div></div><span class="hint" style="margin:0">${n} ${n===1?'entry':'entries'}</span></div>`;
+  }).join(''):`<div class="empty">No aircraft yet. Add the first one you've worked on.</div>`;
+}
+$('acList').addEventListener('click',e=>{const it=e.target.closest('.item');if(it)editAircraft(it.dataset.id);});
+$('btnAddAc').onclick=()=>editAircraft(null);
+function editAircraft(id,after){
+  const a=id?acById(id):{reg:'',make:'',model:'',engine:'',serial:'',typeOverride:''};
+  openModal(id?'Edit aircraft':'New aircraft',`
+    <label>Registration</label><input id="aReg" class="mono" autocapitalize="characters" value="${esc(a.reg)}" placeholder="G-ABCD">
+    <div class="row"><div><label>Make</label><input id="aMake" value="${esc(a.make)}" placeholder="Leonardo"></div>
+    <div><label>Model</label><input id="aModel" value="${esc(a.model)}" placeholder="AW139"></div></div>
+    <div class="hint">Type a model, such as AW139 or S-92, to pick it from the UK Part-66 type rating list. That fills in the make, engine and type for you.</div>
+    <label>Engine</label><input id="aEng" value="${esc(a.engine)}" placeholder="PWC PT6C-67C">
+    <label>Serial number</label><input id="aSer" class="mono" value="${esc(a.serial)}">
+    <label>Type as printed <span class="opt">(Part-66 type rating endorsement)</span></label>
+    <input id="aType" value="${esc(a.typeOverride)}" placeholder="">
+    <div class="hint">Pages are grouped by this type: <b id="aPrev"></b></div>
+    <div class="btns"><button class="btn" id="aSave" type="button">Save aircraft</button>${id?'<button class="btn danger" id="aDel" type="button">Delete</button>':''}</div>`,
+  ()=>{
+    const prev=()=>{$('aType').placeholder=typeLabel({make:$('aMake').value,model:$('aModel').value,engine:$('aEng').value,reg:$('aReg').value});$('aPrev').textContent=$('aType').value||$('aType').placeholder||'—';};
+    ['aMake','aModel','aEng','aType','aReg'].forEach(i=>$(i).addEventListener('input',prev));prev();
+    attachSuggest($('aModel'),{list:'part66-types',find:findTypes,
+      row:it=>`<b>${esc(it.model)}${it.desig?' ('+esc(it.desig)+')':''}</b><small>${esc(it.rating)}, ${esc(titleish(it.make))}</small>`,
+      pick:it=>{$('aModel').value=it.model;$('aMake').value=titleish(it.make);$('aEng').value=engineOf(it.rating);$('aType').value=it.rating;prev();}});
+    attachSuggest($('aType'),{list:'part66-types',find:findRatings,row:it=>`<b>${esc(it.rating)}</b>`,
+      pick:it=>{$('aType').value=it.rating;if(!$('aEng').value)$('aEng').value=engineOf(it.rating);prev();}});
+    $('aSave').onclick=async()=>{
+      const reg=$('aReg').value.trim().toUpperCase();
+      if(!reg){toast('Registration is required');return;}
+      if(live(S.aircraft).some(x=>x.reg===reg&&x.id!==id)){toast(reg+' already exists');return;}
+      const obj={id:id||uid(),reg,make:$('aMake').value.trim(),model:$('aModel').value.trim(),engine:$('aEng').value.trim(),serial:$('aSer').value.trim(),typeOverride:$('aType').value.trim()};
+      upsert(S.aircraft,obj);await save();closeModal();renderAc();fillAcSelect(lastAc);
+      if(after) after(obj.id); toast('Aircraft saved');
+    };
+    if(id) $('aDel').onclick=async()=>{
+      const n=live(S.entries).filter(e=>e.aircraftId===id).length;
+      if(n){toast(`Can't delete: ${n} entries use this aircraft`,3500);return;}
+      if(!confirm('Delete '+a.reg+'?'))return;tombstone(S.aircraft,id);await save();closeModal();renderAc();fillAcSelect('');
+    };
+  });
+}
+
+/* ---------- SUPERVISORS ---------- */
+const supMissing=s=>!s.licNo||!s.cat||!s.mro;
+function renderSups(){
+  const list=live(S.supervisors).sort((a,b)=>a.name.localeCompare(b.name));
+  $('supListView').innerHTML=list.length?list.map(s=>`<div class="item" data-id="${s.id}"><div class="main"><div class="t">${esc(s.name)}</div><div class="s">${esc([s.cat,s.licNo,s.mro].filter(Boolean).join(', ')||'No licence details yet')}</div></div>${supMissing(s)?'<span class="badge">Details needed</span>':''}</div>`).join(''):`<div class="empty">No supervisors yet. Names you type on an entry are added here automatically.</div>`;
+}
+$('supListView').addEventListener('click',e=>{const it=e.target.closest('.item');if(it)editSup(it.dataset.id);});
+$('btnAddSup').onclick=()=>editSup(null);
+function editSup(id){
+  const s=id?supById(id):{name:'',cat:'',licNo:'',mro:''};
+  openModal(id?'Edit supervisor':'New supervisor',`
+    <label>Name</label><input id="pName" autocapitalize="words" value="${esc(s.name)}">
+    <div class="row"><div><label>Licence type / cat.</label><input id="pCat" value="${esc(s.cat)}" placeholder="B1.3"></div>
+    <div><label>Licence number</label><input id="pLic" class="mono" value="${esc(s.licNo)}" autocapitalize="characters"></div></div>
+    <label>MRO &amp; approval number</label><input id="pMro" value="${esc(s.mro)}" placeholder="Type a company, town or UK.145 number">
+    <div class="hint">Pick from the CAA list of UK Part 145 organisations, or type your own. These go on the signature sheet. Their signature and stamp are added in ink.</div>
+    <div class="btns"><button class="btn" id="pSave" type="button">Save</button>${id?'<button class="btn danger" id="pDel" type="button">Delete</button>':''}</div>`,
+  ()=>{
+    attachSuggest($('pMro'),{list:'part145-orgs',find:findOrgs,
+      row:it=>`<b>${esc(it.name)}</b><small>${esc(it.ref)}${it.town?', '+esc(it.town):''}</small>`,
+      pick:it=>{$('pMro').value=`${it.name} ${it.ref}`;}});
+    $('pSave').onclick=async()=>{
+      const name=$('pName').value.trim();if(!name){toast('Name is required');return;}
+      if(live(S.supervisors).some(x=>x.name.toLowerCase()===name.toLowerCase()&&x.id!==id)){toast(name+' already exists');return;}
+      upsert(S.supervisors,{id:id||uid(),name,cat:$('pCat').value.trim(),licNo:$('pLic').value.trim().toUpperCase(),mro:$('pMro').value.trim()});
+      await save();closeModal();renderSups();fillSupList();$('fSup').dispatchEvent(new Event('input'));toast('Supervisor saved');
+    };
+    if(id) $('pDel').onclick=async()=>{
+      const n=live(S.entries).filter(e=>e.supervisorId===id).length;
+      if(n){toast(`Can't delete: ${n} entries are signed by ${s.name}`,3500);return;}
+      if(!confirm('Delete '+s.name+'?'))return;tombstone(S.supervisors,id);await save();closeModal();renderSups();fillSupList();
+    };
+  });
+}
+
+/* ---------- LOGBOOK ---------- */
+let bookPages=[];
+function filteredEntries(){
+  const ty=$('xType').value,at=$('xAta').value;
+  return live(S.entries).filter(e=>(!ty||typeLabel(acById(e.aircraftId))===ty)&&(!at||e.ata===at));
+}
+function sheetHtml(P,pi){
+  const mark=esc(contMark());
+  const rows=[];
+  P.items.forEach(({e,L})=>{
+    const ac=acById(e.aircraftId),s=supById(e.supervisorId);
+    for(let j=0;j<L.k;j++){
+      const txt=esc(linesText(rowLines(L,j)));
+      rows.push(j===0
+        ?`<div class="slot" data-id="${e.id}"><div class="l"><b>${fmtD(e.date)}</b>${esc(ac?.reg||'')}<div class="ac">${esc((e.acts||[]).join(', '))}</div></div>
+           <div><div class="x">${txt}</div><div class="m${s?'':' warn'}">${s?esc(s.name):'No supervisor'}</div></div></div>`
+        :`<div class="slot cont" data-id="${e.id}"><div class="l">${mark}</div><div><div class="x">${txt}</div></div></div>`);
+    }
+  });
+  while(rows.length<ROWS_PER_PAGE) rows.push(`<div class="slot blank"><div class="l"></div><div></div></div>`);
+  const free=ROWS_PER_PAGE-P.used;
+  return `<article class="sheet">
+    <div class="sh"><div class="ty">${esc(P.type)}</div><div class="at">ATA <b>${P.ata}</b> ${esc(ATA_NAME[P.ata]||'')}</div>
+      <div class="pn">Page ${P.n} of ${P.of}${P.full?'<br><span class="full">Full</span>':''}</div></div>
+    ${rows.join('')}
+    <div class="sf"><span>${free?`${free} of ${ROWS_PER_PAGE} rows free`:'All five rows used'}</span><button class="btn sec" type="button" data-page="${pi}">Export page</button></div>
+  </article>`;
+}
+function renderBook(){
+  const all=live(S.entries);
+  const types=[...new Set(all.map(e=>typeLabel(acById(e.aircraftId))))].sort();
+  const atas=[...new Set(all.map(e=>e.ata))].sort((a,b)=>+a- +b);
+  const tv=$('xType').value,av=$('xAta').value;
+  $('xType').innerHTML='<option value="">All types</option>'+types.map(t=>`<option>${esc(t)}</option>`).join('');
+  $('xAta').innerHTML='<option value="">All chapters</option>'+atas.map(a=>`<option value="${a}">${a} – ${esc(ATA_NAME[a]||'')}</option>`).join('');
+  if(types.includes(tv))$('xType').value=tv; if(atas.includes(av))$('xAta').value=av;
+
+  const es=filteredEntries(),pages=groupPages(es);bookPages=pages;
+  const sups=[...new Set(es.map(e=>e.supervisorId).filter(Boolean))].map(supById).filter(Boolean);
+  const noSup=es.filter(e=>!e.supervisorId).length, badSup=sups.filter(supMissing);
+  const tooLong=es.filter(e=>!entryLayout(e).ok).length;
+  const w=[];
+  if(!S.settings.ownerName) w.push('Add your name in Settings so it prints on every page.');
+  if(noSup) w.push(`${noSup} ${noSup===1?'entry has':'entries have'} no supervisor.`);
+  if(badSup.length) w.push(`Licence details missing for ${badSup.map(s=>esc(s.name)).join(', ')}.`);
+  if(tooLong) w.push(`${tooLong} task ${tooLong===1?'description is':'descriptions are'} longer than a whole page and will be cut off.`);
+  $('xWarn').innerHTML=w.map(x=>`<div class="warnbox">${x}</div>`).join('');
+  $('xSummary').textContent=es.length?`${es.length} ${es.length===1?'entry':'entries'} on ${pages.length} task ${pages.length===1?'page':'pages'}${$('xSig').checked?` plus ${Math.max(1,Math.ceil(sups.length/SIGS_PER_PAGE))} signature sheet`:''}, sorted by ATA chapter.`:'';
+  $('btnExport').disabled=!es.length;
+
+  $('bookList').innerHTML=pages.length?pages.map(sheetHtml).join(''):`<div class="empty">${all.length?'No entries match these filters.':'No entries yet. Add your first one on the Entry tab.'}</div>`;
+}
+$('xType').onchange=$('xAta').onchange=$('xSig').onchange=renderBook;
+$('bookList').addEventListener('click',e=>{
+  const b=e.target.closest('[data-page]');
+  if(b){exportPages([bookPages[+b.dataset.page]],$('xSig').checked,b);return;}
+  const r=e.target.closest('.slot[data-id]');if(r)editEntry(r.dataset.id);
+});
+$('btnExport').onclick=()=>exportPages(groupPages(filteredEntries()),$('xSig').checked,$('btnExport'));
+
+/* ---------- SETTINGS ---------- */
+$('sOwner').addEventListener('change',async()=>{await setSetting('ownerName',$('sOwner').value.trim());toast('Saved');});
+$('sAskPrint').addEventListener('change',async()=>{await setSetting('askPrint',$('sAskPrint').checked);toast('Saved');});
+$('sMark').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;await setSetting('contMark',b.dataset.m);renderSettings();updateFit();});
+$('btnBackup').onclick=async()=>{
+  const bytes=new TextEncoder().encode(JSON.stringify(S,null,1));
+  await deliver(bytes,`cap741-backup-${fmtD(todayISO())}.json`,'application/json');
+};
+$('btnImport').onclick=()=>$('importFile').click();
+$('importFile').onchange=async e=>{
+  const f=e.target.files[0];if(!f)return;
+  try{const d=JSON.parse(await f.text());if(!d||!Array.isArray(d.entries))throw new Error('Not a CAP 741 Log backup');
+    const before=live(S.entries).length;S=merge(S,d);await save();refreshAll();toast(`Imported ${live(S.entries).length-before} new entries`,3500);}
+  catch(err){alert('Import failed: '+err.message);}
+  e.target.value='';
+};
+$('btnTpl').onclick=()=>$('tplFile').click();
+$('tplFile').onchange=async e=>{
+  const f=e.target.files[0];if(!f)return;
+  try{
+    const bytes=new Uint8Array(await f.arrayBuffer());
+    const d=await PDFLib.PDFDocument.load(bytes);const n=d.getPageCount();
+    const def=n>=32?{t:32,s:31}:{t:1,s:Math.min(2,n)};
+    const t=+prompt(`This PDF has ${n} pages.\nWhich page is the blank Section 3.1 TASK page (Activity / Date / A/C Reg…)?`,def.t);
+    const s=+prompt('Which page is the Section 3.1 SIGNATURE sheet (Signatory Name / Signature / MRO…)?',def.s);
+    if(!(t>=1&&t<=n&&s>=1&&s<=n)) throw new Error('Page numbers out of range');
+    await idb.set('template',{bytes,taskPage:t,sigPage:s,name:f.name});renderSettings();toast('Template updated');
+  }catch(err){alert('Could not use that PDF: '+err.message);}
+  e.target.value='';
+};
+$('btnTplReset').onclick=async()=>{await idb.del('template');renderSettings();toast('Using built-in template');};
+
+async function renderSettings(){
+  $('sOwner').value=S.settings.ownerName||'';
+  $('sAskPrint').checked=askPrintOn();
+  document.querySelectorAll('#sMark button').forEach(b=>b.classList.toggle('on',b.dataset.m===contMark()));
+  const t=await idb.get('template');
+  $('tplStatus').textContent=t?`Using ${t.name} (task page ${t.taskPage}, signature page ${t.sigPage}).`:'Using the built-in CAP 741 Issue 4 Section 3.1 pages.';
+  renderDbx();
+}
+
+/* ---------- DROPBOX ---------- */
+const appKey=()=>DEV.appKey||DROPBOX_APP_KEY;
+const b64url=buf=>btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+async function saveDev(){await idb.set('device',DEV);}
+
+function dbxGuide(){
+  // Steps 1–4 happen on dropbox.com; mark them done once a key has been pasted, then track the connect/allow steps.
+  const st=i=>{const hasKey=!!appKey();if(i<=4)return hasKey?'done':'';if(i===5)return DEV.verifier?'done':hasKey?'now':'';return DEV.verifier?'now':'';};
+  return `<details class="guide"${DEV.verifier?'':' open'}>
+    <summary>Set up Dropbox step by step</summary>
+    <ol class="steps">
+      <li class="${st(1)}"><b>Open the Dropbox App Console</b>Go to <a href="https://www.dropbox.com/developers/apps" target="_blank" rel="noopener">dropbox.com/developers/apps</a> and sign in with your normal Dropbox account. On iPhone the page is easier to use with Safari's <i>Request Desktop Website</i> (the <i>aA</i> button).</li>
+      <li class="${st(2)}"><b>Create an app</b>Tap <i>Create app</i>. Choose <i>Scoped access</i>, then <i>App folder</i>, and give it a name nobody else will have used, such as "CAP741 Log" followed by your initials. Tap <i>Create app</i>.</li>
+      <li class="${st(3)}"><b>Turn on file permissions</b>Open the <i>Permissions</i> tab, tick these two, then tap <i>Submit</i> at the bottom of the page. Do this before connecting, or sync won't be allowed to save.
+        <div class="copy"><button type="button" data-copy="files.content.write">files.content.write</button><button type="button" data-copy="files.content.read">files.content.read</button></div></li>
+      <li class="${st(4)}"><b>Copy the App key</b>Back on the <i>Settings</i> tab, copy the <i>App key</i>. Don't use the App secret, and leave the redirect URIs empty.</li>
+      <li class="${st(5)}"><b>Paste the key below and tap Connect Dropbox</b>Dropbox opens in a new tab.</li>
+      <li class="${st(6)}"><b>Allow, then paste the code</b>Tap <i>Allow</i>. Dropbox shows a code: copy it, come back to this tab, paste it into the box that appears below and tap <i>Finish connecting</i>.</li>
+    </ol>
+    <div class="hint" style="padding:0 14px 14px;margin:0">Your logbook is saved as <code>Apps/&lt;app name&gt;/cap741-log.json</code>. To sync another device, connect it the same way with the same App key. If you change permissions later, disconnect and connect again.</div>
+  </details>`;
+}
+function renderDbx(){
+  const c=$('dbxCard');
+  if(DEV.refresh){
+    c.innerHTML=`<div class="kv"><dt>Status</dt><dd>Connected</dd><dt>File</dt><dd><code>Apps/…${DBX_PATH}</code></dd><dt>Last sync</dt><dd>${DEV.lastSync?new Date(DEV.lastSync).toLocaleString('en-GB'):'Not yet'}</dd></div>
+      <div class="btns"><button class="btn sec" id="dSync" type="button">Sync now</button><button class="btn danger" id="dOff" type="button">Disconnect</button></div>`;
+    $('dSync').onclick=()=>sync(true);
+    $('dOff').onclick=async()=>{if(!confirm('Disconnect Dropbox on this phone? Your data stays here and in Dropbox.'))return;delete DEV.refresh;delete DEV.access;await saveDev();renderDbx();setPill();};
+    return;
+  }
+  c.innerHTML=`
+    <div class="hint" style="margin-top:0">Keeps this phone and your other devices in step through a private folder in your Dropbox. It works offline, and changes sync when you have signal. Setting it up takes about five minutes.</div>
+    ${dbxGuide()}
+    <label>Dropbox App key</label><input id="dKey" class="mono" value="${esc(appKey())}" placeholder="Paste from the Settings tab of your Dropbox app" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <div class="btns"><button class="btn" id="dGo" type="button">Connect Dropbox</button></div>
+    <div id="dStep2" style="display:${DEV.verifier?'block':'none'}">
+      <label>Code from Dropbox</label><input id="dCode" class="mono" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Paste the code shown after you tap Allow">
+      <div class="btns"><button class="btn" id="dFinish" type="button">Finish connecting</button></div>
+    </div>`;
+  c.querySelectorAll('[data-copy]').forEach(b=>b.onclick=async()=>{
+    try{await navigator.clipboard.writeText(b.dataset.copy);b.classList.add('done');toast('Copied '+b.dataset.copy);}catch(e){toast('Copy failed. Type it in instead.');}
+  });
+  $('dGo').onclick=async()=>{
+    const key=$('dKey').value.trim();if(!key){toast('Paste your Dropbox App key first. Steps 1 to 4 show where to find it.',3500);c.querySelector('.guide').open=true;return;}
+    DEV.appKey=key;
+    const rnd=crypto.getRandomValues(new Uint8Array(48));DEV.verifier=b64url(rnd);
+    const ch=b64url(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(DEV.verifier)));
+    await saveDev();
+    const u=`https://www.dropbox.com/oauth2/authorize?client_id=${encodeURIComponent(key)}&response_type=code&code_challenge=${ch}&code_challenge_method=S256&token_access_type=offline`;
+    window.open(u,'_blank');renderDbx();
+  };
+  if($('dFinish')) $('dFinish').onclick=async()=>{
+    const code=$('dCode').value.trim();if(!code){toast('Paste the code from Dropbox');return;}
+    try{
+      const r=await fetch('https://api.dropboxapi.com/oauth2/token',{method:'POST',body:new URLSearchParams({code,grant_type:'authorization_code',code_verifier:DEV.verifier,client_id:appKey()})});
+      const j=await r.json();if(!r.ok)throw new Error(j.error_description||j.error||r.status);
+      DEV.refresh=j.refresh_token;DEV.access=j.access_token;DEV.exp=now()+(j.expires_in-60)*1000;delete DEV.verifier;await saveDev();
+      toast('Dropbox connected');renderDbx();sync(true);
+    }catch(err){alert('Dropbox connection failed: '+err.message+'\nCheck step 3 (permissions), then tap Connect Dropbox again.');}
+  };
+}
+async function token(){
+  if(DEV.access&&DEV.exp>now()) return DEV.access;
+  const r=await fetch('https://api.dropboxapi.com/oauth2/token',{method:'POST',body:new URLSearchParams({grant_type:'refresh_token',refresh_token:DEV.refresh,client_id:appKey()})});
+  const j=await r.json();if(!r.ok){if(j.error==='invalid_grant'){delete DEV.refresh;await saveDev();}throw new Error(j.error_description||j.error||r.status);}
+  DEV.access=j.access_token;DEV.exp=now()+(j.expires_in-60)*1000;await saveDev();return DEV.access;
+}
+let syncing=false,syncAgain=false,syncT;
+function scheduleSync(){if(!DEV.refresh){setPill();return;}setPill('Saved, syncing…','warn');clearTimeout(syncT);syncT=setTimeout(sync,2500);}
+async function sync(manual){
+  if(!DEV.refresh){setPill();return;}
+  if(!navigator.onLine){setPill('Offline, saved on phone','warn');return;}
+  if(syncing){syncAgain=true;return;}
+  syncing=true;setPill('Syncing…','warn');
+  try{
+    const t=await token();
+    let remote=null;
+    const d=await fetch('https://content.dropboxapi.com/2/files/download',{method:'POST',headers:{Authorization:'Bearer '+t,'Dropbox-API-Arg':JSON.stringify({path:DBX_PATH})}});
+    if(d.ok) remote=await d.json(); else if(d.status!==409) throw new Error('Download failed ('+d.status+')');
+    const before=JSON.stringify(S);
+    if(remote) S=merge(S,remote);
+    await idb.set('state',S);
+    const u=await fetch('https://content.dropboxapi.com/2/files/upload',{method:'POST',headers:{Authorization:'Bearer '+t,'Content-Type':'application/octet-stream','Dropbox-API-Arg':JSON.stringify({path:DBX_PATH,mode:'overwrite',mute:true})},body:JSON.stringify(S)});
+    if(!u.ok) throw new Error('Upload failed ('+u.status+')');
+    DEV.lastSync=now();await saveDev();
+    if(JSON.stringify(S)!==before) refreshAll(true);
+    setPill('Synced '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}),'ok');
+    if(manual) toast('Synced with Dropbox');
+  }catch(err){console.warn(err);setPill('Sync failed, saved on phone','warn');if(manual)toast('Sync failed: '+err.message,4000);}
+  syncing=false;if(syncAgain){syncAgain=false;sync();}
+  if(document.querySelector('#view-set.on')) renderDbx();
+}
+function setPill(txt,cls){
+  const p=$('syncPill');
+  if(!txt){txt=DEV.refresh?'Dropbox':'On phone';cls=DEV.refresh?'ok':'off';}
+  p.textContent=txt;p.className='pill '+cls;
+}
+$('syncPill').onclick=()=>DEV.refresh?sync(true):show('set');
+window.addEventListener('online',()=>sync());
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')sync();});
+
+/* ---------- boot ---------- */
+function refreshAll(keepForm){
+  fillSupList();
+  if(!keepForm||!editingId) fillAcSelect($('fAc').value);
+  const v=document.querySelector('.view.on').id.replace('view-','');
+  ({book:renderBook,ac:renderAc,sup:renderSups,set:renderSettings}[v]||(()=>{}))();
+}
+(async function boot(){
+  S=(await idb.get('state'))||blank();
+  DEV=(await idb.get('device'))||{};
+  if(navigator.storage&&navigator.storage.persist) navigator.storage.persist().catch(()=>{});
+  await measureFonts();   // page packing needs text widths, so load them before anything renders
+  fillAtaSelect();fillSupList();
+  const draft=await idb.get('draft');
+  newEntry(draft||undefined);
+  setPill();
+  templateBytes().catch(()=>toast('PDF template missing. Check cap741-template.pdf is uploaded.',4000));
+  if(!S.settings.ownerName&&!live(S.entries).length) setTimeout(()=>{show('set');toast('Start by adding your name. It prints on every page.',4000);},300);
+  sync();
+  if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+})();
+</script>
+</body>
+</html>
