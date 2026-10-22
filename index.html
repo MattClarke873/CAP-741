@@ -126,6 +126,9 @@ legend{font:700 19px/1 var(--head);padding:0 6px;margin-left:-6px}
 .item .s{font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .badge{font:700 13px/1 var(--head);padding:5px 8px;border-radius:4px;background:var(--warn-soft);color:var(--warn);white-space:nowrap}
 .empty{color:var(--muted);text-align:center;padding:30px 10px}
+.warnbox.acw b{display:block;margin-bottom:2px}
+.link.inl{margin:0;font-size:inherit;color:var(--accent-ink);font-weight:600}
+.filterbar{background:var(--accent-soft);border:1.5px solid var(--accent);border-radius:8px;padding:9px 12px;font-size:14px;margin:10px 0;font-weight:600}
 .warnbox{border-left:4px solid var(--danger);background:var(--card);border-radius:4px;padding:9px 12px;font-size:14px;margin:10px 0}
 .check{display:flex;gap:10px;align-items:center;font-size:15px;margin-top:14px;color:var(--ink);font-weight:500}
 .check input{width:22px;height:22px;-webkit-appearance:auto;appearance:auto;accent-color:var(--accent);flex:0 0 auto;margin:0}
@@ -344,6 +347,7 @@ ol.steps b{display:block;font:700 16.5px/1.25 var(--head);margin-bottom:2px}
 <!-- ============ LOGBOOK ============ -->
 <section class="view" id="view-book">
   <h2>Logbook</h2>
+  <div id="xAlert"></div>
   <details class="cov" id="covBox" open>
     <summary><b>ATA coverage</b><span id="covSum"></span></summary>
     <div class="body" id="covBody"></div>
@@ -1264,7 +1268,12 @@ function editSup(id){
 
 /* ---------- LOGBOOK ---------- */
 let bookPages=[];
+/* Entries whose aircraft can't print properly: no aircraft at all (or one that was deleted / never synced),
+   or an aircraft with no type to go at the top of the page. */
+const acProblem=e=>{const a=acById(e.aircraftId);return !a||a.deleted?'none':(!a.typeOverride&&!a.make&&!a.model)?'type':'';};
+let onlyAcProblems=false;   // "Show just these" from the warning
 function filteredEntries(){
+  if(onlyAcProblems) return live(S.entries).filter(acProblem);
   const ty=$('xType').value,at=$('xAta').value;
   const pu=$('xPurpose').value;
   return live(S.entries).filter(e=>(!ty||typeLabel(acById(e.aircraftId))===ty)&&(!at||e.ata===at)&&(!pu||(pu==='none'?!e.purpose:e.purpose===pu)));
@@ -1431,7 +1440,22 @@ function renderBook(){
   if(reps) w.push(`${reps} ${reps===1?'entry repeats a task':'entries repeat tasks'} already logged in the same chapter. CAP 741 only needs each task once, so consider swapping ${reps===1?'it':'them'} for something different.`);
   if(routine.length) w.push(`Only routine tasks so far in ATA ${routine.join(', ')}. Add a removal/installation, functional test or troubleshooting task to show depth.`);
   if(tooLong) w.push(`${tooLong} task ${tooLong===1?'description is':'descriptions are'} longer than a whole page and will be cut off.`);
-  $('xWarn').innerHTML=w.map(x=>`<div class="warnbox">${x}</div>`).join('');
+  // aircraft problems are counted across the whole logbook, so the warning shows whatever the filters
+  const allProb=live(S.entries).filter(acProblem),noAc=allProb.filter(e=>acProblem(e)==='none').length;
+  const typeless=[...new Set(allProb.filter(e=>acProblem(e)==='type').map(e=>e.aircraftId))].map(acById);
+  if(onlyAcProblems&&!allProb.length){onlyAcProblems=false;toast('All entries now have aircraft details');return renderBook();}
+  let acw='';
+  if(allProb.length){
+    const parts=[];
+    if(noAc) parts.push(`${noAc} ${noAc===1?'entry has':'entries have'} no aircraft. Open ${noAc===1?'it':'each one'} and type the reg.`);
+    if(typeless.length) parts.push(`${allProb.length-noAc} ${allProb.length-noAc===1?'entry is':'entries are'} on aircraft with no type set: ${typeless.map(a=>`<button type="button" class="link inl" data-fixac="${a.id}">${esc(a.reg)}</button>`).join(', ')}. Tap a reg to add its type.`);
+    acw=`<div class="warnbox acw"><b>${allProb.length} ${allProb.length===1?'entry is':'entries are'} missing aircraft details.</b> ${parts.join(' ')}
+      <div class="btns" style="margin-top:8px">${onlyAcProblems?`<button type="button" class="btn sec small" data-acfilter="off">Show all entries</button>`:`<button type="button" class="btn small" data-acfilter="on">Show just these</button>`}</div></div>`;
+  }
+  // aircraft problems sit at the very top of the Logbook so they're seen before the coverage panel
+  $('xAlert').innerHTML=(onlyAcProblems?`<div class="filterbar">Showing only the ${allProb.length} ${allProb.length===1?'entry':'entries'} missing aircraft details. Tap one to fix it.</div>`:'')+acw;
+  $('covBox').hidden=onlyAcProblems;$('expBox').hidden=onlyAcProblems;
+  $('xWarn').innerHTML=onlyAcProblems?'':w.map(x=>`<div class="warnbox">${x}</div>`).join('');
   const unset=es.filter(e=>!e.purpose).length;
   $('xUnset').innerHTML=unset?`<div class="hint">${unset} ${unset===1?'entry here isn\'t':'entries here aren\'t'} marked as training or certification yet.</div>
     <div class="btns" style="margin-top:8px"><button class="btn sec small" type="button" data-bulk="training">Mark as training</button><button class="btn sec small" type="button" data-bulk="certification">Mark as certification</button></div>`:'';
@@ -1441,6 +1465,12 @@ function renderBook(){
   $('bookList').innerHTML=pages.length?pages.map(sheetHtml).join(''):`<div class="empty">${all.length?'No entries match these filters.':'No entries yet. Add your first one on the Entry tab.'}</div>`;
 }
 $('xType').onchange=$('xAta').onchange=$('xSig').onchange=$('xPurpose').onchange=renderBook;
+$('xAlert').addEventListener('click',e=>{
+  const f=e.target.closest('[data-acfilter]');
+  if(f){onlyAcProblems=f.dataset.acfilter==='on';renderBook();$('bookList').scrollIntoView({behavior:'smooth'});return;}
+  const a=e.target.closest('[data-fixac]');
+  if(a) editAircraft(a.dataset.fixac,()=>renderBook());
+});
 $('xUnset').addEventListener('click',async e=>{
   const b=e.target.closest('[data-bulk]');if(!b)return;
   const list=filteredEntries().filter(x=>!x.purpose),p=b.dataset.bulk;
