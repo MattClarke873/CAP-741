@@ -276,7 +276,7 @@ ol.steps b{display:block;font:700 16.5px/1.25 var(--head);margin-bottom:2px}
     </div>
     <label class="check"><input type="checkbox" id="xSig" checked> Include supervisor signature sheet</label>
     <div id="xWarn"></div>
-    <div class="btns"><button class="btn block" id="btnExport" type="button">Export PDF</button></div>
+    <div class="btns"><button class="btn block" id="btnExport" type="button">Download PDF</button></div>
     <div class="hint" id="xSummary"></div>
   </div>
   <div id="bookList"></div>
@@ -668,9 +668,10 @@ async function buildPdf(pages,withSig){
   doc.setCreator('CAP 741 Log');
   return doc.save();
 }
-async function deliver(bytes,name,mime='application/pdf'){
+// PDFs download straight to the device (Files > Downloads on iPhone); backups still open the share sheet
+async function deliver(bytes,name,mime='application/pdf',{share=true}={}){
   const file=new File([bytes],name,{type:mime});
-  if(navigator.canShare&&navigator.canShare({files:[file]})){
+  if(share&&navigator.canShare&&navigator.canShare({files:[file]})){
     try{await navigator.share({files:[file],title:name});return;}
     catch(e){if(e.name==='AbortError')return;}
   }
@@ -684,9 +685,10 @@ async function exportPages(pages,withSig,btn){
   try{
     const bytes=await buildPdf(pages,withSig);
     const who=(S.settings.ownerName||'logbook').replace(/[^A-Za-z0-9]+/g,'-');
-    const what=pages.length===1?`ATA${pages[0].ata}-${pages[0].type.replace(/[^A-Za-z0-9]+/g,'-')}-p${pages[0].n}`:'S3.1';
-    await deliver(bytes,`CAP741-${what}-${who}-${fmtD(todayISO())}.pdf`);
-  }catch(err){console.error(err);alert('PDF export failed: '+err.message);}
+    const what=pages.length===1?`ATA${pages[0].ata}-${pages[0].type.replace(/[^A-Za-z0-9]+/g,'-').replace(/^-|-$/g,'')}-p${pages[0].n}`:'S3.1';
+    await deliver(bytes,`CAP741-${what}-${who}-${fmtD(todayISO())}.pdf`,'application/pdf',{share:false});
+    toast('PDF downloaded');
+  }catch(err){console.error(err);alert('PDF download failed: '+err.message);}
   if(btn){btn.disabled=false;btn.textContent=label;}
 }
 
@@ -916,12 +918,12 @@ function askToPrint(pages){
     <p>${esc(p.type)}, ATA ${p.ata}, page ${p.n} has no rows left${more?` (plus ${more} more page${more>1?'s':''} for this type and chapter)`:''}.</p>
     <p>Print it now so you and your supervisor can sign it while the work is fresh?</p>
     <label class="check"><input type="checkbox" id="pkSig"> Include supervisor signature sheet</label>
-    <div class="btns"><button class="btn" id="pkGo" type="button">Export ${pages.length>1?'pages':'page'}</button><button class="btn sec" id="pkNo" type="button">Not now</button></div>
+    <div class="btns"><button class="btn" id="pkGo" type="button">Download ${pages.length>1?'pages':'page'}</button><button class="btn sec" id="pkNo" type="button">Not now</button></div>
     <button class="link" id="pkNever" type="button">Stop asking (turn back on in Settings)</button>`,
   ()=>{
     $('pkGo').onclick=async()=>{await exportPages(pages,$('pkSig').checked,$('pkGo'));closeModal();};
     $('pkNo').onclick=closeModal;
-    $('pkNever').onclick=async()=>{await setSetting('askPrint',false);closeModal();toast('You won\'t be asked again. Pages can still be exported from the Logbook.',3500);};
+    $('pkNever').onclick=async()=>{await setSetting('askPrint',false);closeModal();toast('You won\'t be asked again. Pages can still be downloaded from the Logbook.',3500);};
   });
 }
 
@@ -1032,7 +1034,7 @@ function sheetHtml(P,pi){
     <div class="sh"><div class="ty">${esc(P.type)}</div><div class="at">ATA <b>${P.ata}</b> ${esc(ATA_NAME[P.ata]||'')}</div>
       <div class="pn">Page ${P.n} of ${P.of}${P.full?'<br><span class="full">Full</span>':''}</div></div>
     ${rows.join('')}
-    <div class="sf"><span>${free?`${free} of ${ROWS_PER_PAGE} rows free`:'All five rows used'}</span><button class="btn sec" type="button" data-page="${pi}">Export page</button></div>
+    <div class="sf"><span>${free?`${free} of ${ROWS_PER_PAGE} rows free`:'All five rows used'}</span><button class="btn sec" type="button" data-page="${pi}">Download page</button></div>
   </article>`;
 }
 function renderBook(){
