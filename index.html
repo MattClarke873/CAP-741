@@ -125,6 +125,9 @@ legend{font:700 19px/1 var(--head);padding:0 6px;margin-left:-6px}
 .seg button{border:0;background:transparent;color:var(--ink);font:600 15px/1 var(--body);padding:10px 14px;cursor:pointer}
 .seg button+button{border-left:1.5px solid var(--line)}
 .seg button.on{background:var(--accent);color:var(--on-accent)}
+.seg.purp{display:flex}.seg.purp button{flex:1;font:700 17px/1 var(--head);padding:12px 10px}
+.slot .pt{display:inline-block;margin-top:4px;font:700 10.5px/1 var(--body);padding:3px 5px;border-radius:3px;border:1px solid #9aa5a0;color:#4b5551}
+.slot .pt.certification{background:#1f2624;color:var(--paper);border-color:#1f2624}
 
 /* logbook sheets: paper stays paper in dark mode, entries in pen ink */
 .sheet{background:var(--paper);color:#1f2624;border:1px solid var(--rule);border-radius:3px;margin:0 0 16px;box-shadow:0 1px 0 var(--rule),0 2px 0 -1px var(--paper),0 3px 0 -1px var(--rule)}
@@ -266,6 +269,9 @@ ol.steps b{display:block;font:700 16.5px/1.25 var(--head);margin-bottom:2px}
   <label style="margin-top:0">Activity type</label>
   <div class="chips acts" id="fActs"></div>
 
+  <label>Experience for</label>
+  <div class="seg purp" id="fPurpose" role="group" aria-label="Experience for"><button type="button" data-p="training">Training</button><button type="button" data-p="certification">Certification</button></div>
+
   <label>Date</label>
   <div class="row">
     <input id="fDate" class="mono" placeholder="DDMMMYY e.g. 21OCT26" autocomplete="off" autocapitalize="characters">
@@ -334,6 +340,9 @@ ol.steps b{display:block;font:700 16.5px/1.25 var(--head);margin-bottom:2px}
       <div><label style="margin-top:0">Aircraft type</label><select id="xType"></select></div>
       <div><label style="margin-top:0">ATA</label><select id="xAta"></select></div>
     </div>
+    <label>Experience for</label>
+    <select id="xPurpose"><option value="">Training and certification</option><option value="training">Training only</option><option value="certification">Certification only</option><option value="none">Not set yet</option></select>
+    <div id="xUnset"></div>
     <label class="check"><input type="checkbox" id="xSig" checked> Include supervisor signature sheet</label>
     <div id="xWarn"></div>
     <div class="btns"><button class="btn block" id="btnExport" type="button">Download PDF</button></div>
@@ -617,8 +626,10 @@ function fit(segs,w,h,F,sizes=SIZES){
   let last;
   for(const s of sizes){
     const lh=s*1.16, lines=layout(toks,s,w,F), maxLines=Math.max(1,Math.floor((h+lh-s)/lh));
+    // shrink rather than split a word across lines, unless this is already the smallest size
+    const whole=toks.every(t=>t.nl||(t.b?F.b:F.r).widthOfTextAtSize(t.w,s)<=w);
     last={size:s,lh,lines,maxLines,ok:lines.length<=maxLines};
-    if(last.ok) return last;
+    if(last.ok&&(whole||s===sizes[sizes.length-1])) return last;
   }
   return last;
 }
@@ -858,7 +869,10 @@ const findOrgs=(d,q)=>search(d.items,q,(it,w)=>compact(it.name).startsWith(w)?0:
 const engineOf=rating=>(rating.match(/\(([^()]*)\)\s*$/)||[])[1]||'';
 
 /* ---------- ENTRY FORM ---------- */
-let acts=new Set();
+let acts=new Set(),purpose='';
+const PURPOSE={training:'Training',certification:'Certification'};
+function renderPurpose(){document.querySelectorAll('#fPurpose button').forEach(b=>{b.classList.toggle('on',b.dataset.p===purpose);b.setAttribute('aria-pressed',b.dataset.p===purpose);});}
+$('fPurpose').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;purpose=purpose===b.dataset.p?'':b.dataset.p;renderPurpose();saveDraft();});
 
 function renderActs(){
   $('fActs').innerHTML=ACTS.map(([c,m])=>`<button type="button" class="chip${acts.has(c)?' on':''}" data-c="${c}" aria-pressed="${acts.has(c)}"><b>${c}</b><small>${m}</small></button>`).join('');
@@ -896,7 +910,7 @@ function onDateInput(){
   saveDraft();
 }
 function formEntry(){
-  return {acts:ACTS.map(a=>a[0]).filter(c=>acts.has(c)),date:parseD($('fDate').value),aircraftId:$('fAc').value,ata:$('fAta').value,
+  return {purpose,acts:ACTS.map(a=>a[0]).filter(c=>acts.has(c)),date:parseD($('fDate').value),aircraftId:$('fAc').value,ata:$('fAta').value,
     job:$('fJob').value.trim(),task:$('fTask').value.trim(),reason:$('fReason').value.trim(),manual:$('fManual').value.trim(),
     tooling:$('fTooling').value.trim(),challenges:$('fChal').value.trim(),result:$('fResult').value.trim(),supName:$('fSup').value.trim()};
 }
@@ -961,6 +975,7 @@ function saveDraft(){if(editingId)return;clearTimeout(draftT);draftT=setTimeout(
 
 function setForm(e,{keepDate=false}={}){
   acts=new Set(e.acts||[]);renderActs();
+  purpose=e.purpose||'';renderPurpose();
   if(!keepDate) $('fDate').value=e.date?fmtD(e.date):(e.dateText||fmtD(todayISO()));
   fillAcSelect(e.aircraftId||'');lastAc=e.aircraftId||'';
   $('fAta').value=e.ata||'';
@@ -1000,7 +1015,7 @@ $('btnSave').onclick=async()=>{
   }
   const fullBefore=new Set(groupPages(live(S.entries)).filter(p=>p.full).map(pageSig));
   const old=editingId?S.entries.find(x=>x.id===editingId):null;
-  const e={id:editingId||uid(),createdAt:old?.createdAt||now(),acts:f.acts,date:f.date,aircraftId:f.aircraftId,ata:f.ata,job:f.job,task:f.task,
+  const e={id:editingId||uid(),createdAt:old?.createdAt||now(),purpose:f.purpose,acts:f.acts,date:f.date,aircraftId:f.aircraftId,ata:f.ata,job:f.job,task:f.task,
     reason:f.reason,manual:f.manual,tooling:f.tooling,challenges:f.challenges,result:f.result,supervisorId:supId};
   upsert(S.entries,e);
   await save();
@@ -1011,7 +1026,7 @@ $('btnSave').onclick=async()=>{
     await idb.del('draft');
     if(!f.supName) toast('Saved. No supervisor yet, so add one before printing.',3500); else if(!newSup) toast('Entry saved');
     // keep date, aircraft, ATA and supervisor for the next task on the same job
-    newEntry({date:f.date,aircraftId:f.aircraftId,ata:f.ata,supName:f.supName});
+    newEntry({date:f.date,aircraftId:f.aircraftId,ata:f.ata,supName:f.supName,purpose:f.purpose});
   }
   if(filled.length&&askPrintOn()) askToPrint(filled);
 };
@@ -1118,7 +1133,8 @@ function editSup(id){
 let bookPages=[];
 function filteredEntries(){
   const ty=$('xType').value,at=$('xAta').value;
-  return live(S.entries).filter(e=>(!ty||typeLabel(acById(e.aircraftId))===ty)&&(!at||e.ata===at));
+  const pu=$('xPurpose').value;
+  return live(S.entries).filter(e=>(!ty||typeLabel(acById(e.aircraftId))===ty)&&(!at||e.ata===at)&&(!pu||(pu==='none'?!e.purpose:e.purpose===pu)));
 }
 function sheetHtml(P,pi){
   const mark=esc(contMark());
@@ -1129,7 +1145,7 @@ function sheetHtml(P,pi){
       const txt=esc(linesText(rowLines(L,j)));
       const supLine=j===L.k-1?`<div class="m${s?'':' warn'}">${s?esc(s.name):'No supervisor'}</div>`:'';
       rows.push(j===0
-        ?`<div class="slot" data-id="${e.id}"><div class="l"><b>${fmtD(e.date)}</b>${esc(ac?.reg||'')}<div class="ac">${esc((e.acts||[]).join(', '))}</div></div>
+        ?`<div class="slot" data-id="${e.id}"><div class="l"><b>${fmtD(e.date)}</b>${esc(ac?.reg||'')}<div class="ac">${esc((e.acts||[]).join(', '))}</div>${e.purpose?`<span class="pt ${e.purpose}">${PURPOSE[e.purpose]}</span>`:''}</div>
            <div><div class="x">${txt}</div>${supLine}</div></div>`
         :`<div class="slot cont" data-id="${e.id}"><div class="l">${mark}</div><div><div class="x">${txt}</div>${supLine}</div></div>`);
     }
@@ -1281,12 +1297,22 @@ function renderBook(){
   if(routine.length) w.push(`Only routine tasks so far in ATA ${routine.join(', ')}. Add a removal/installation, functional test or troubleshooting task to show depth.`);
   if(tooLong) w.push(`${tooLong} task ${tooLong===1?'description is':'descriptions are'} longer than a whole page and will be cut off.`);
   $('xWarn').innerHTML=w.map(x=>`<div class="warnbox">${x}</div>`).join('');
+  const unset=es.filter(e=>!e.purpose).length;
+  $('xUnset').innerHTML=unset?`<div class="hint">${unset} ${unset===1?'entry here isn\'t':'entries here aren\'t'} marked as training or certification yet.</div>
+    <div class="btns" style="margin-top:8px"><button class="btn sec small" type="button" data-bulk="training">Mark as training</button><button class="btn sec small" type="button" data-bulk="certification">Mark as certification</button></div>`:'';
   $('xSummary').textContent=es.length?`${es.length} ${es.length===1?'entry':'entries'} on ${pages.length} task ${pages.length===1?'page':'pages'}${$('xSig').checked?` plus ${Math.max(1,Math.ceil(sups.length/SIGS_PER_PAGE))} signature sheet`:''}, sorted by ATA chapter.`:'';
   $('btnExport').disabled=!es.length;
 
   $('bookList').innerHTML=pages.length?pages.map(sheetHtml).join(''):`<div class="empty">${all.length?'No entries match these filters.':'No entries yet. Add your first one on the Entry tab.'}</div>`;
 }
-$('xType').onchange=$('xAta').onchange=$('xSig').onchange=renderBook;
+$('xType').onchange=$('xAta').onchange=$('xSig').onchange=$('xPurpose').onchange=renderBook;
+$('xUnset').addEventListener('click',async e=>{
+  const b=e.target.closest('[data-bulk]');if(!b)return;
+  const list=filteredEntries().filter(x=>!x.purpose),p=b.dataset.bulk;
+  if(!confirm(`Mark ${list.length} ${list.length===1?'entry':'entries'} as ${PURPOSE[p].toLowerCase()}?`))return;
+  for(const x of list) upsert(S.entries,{...x,purpose:p});
+  await save();renderBook();toast(`${list.length} marked as ${PURPOSE[p].toLowerCase()}`);
+});
 $('bookList').addEventListener('click',e=>{
   const b=e.target.closest('[data-page]');
   if(b){exportPages([bookPages[+b.dataset.page]],$('xSig').checked,b);return;}
