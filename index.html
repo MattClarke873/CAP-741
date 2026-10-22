@@ -219,6 +219,20 @@ ol.steps b{display:block;font:700 16.5px/1.25 var(--head);margin-bottom:2px}
 .rd span{font:700 17px/1 var(--head);text-align:right}
 .rbar{height:10px;border-radius:5px;background:var(--line);overflow:hidden}
 .rbar i{display:block;height:100%;background:var(--accent);border-radius:5px}
+.cv .flag{font:600 10.5px/1.2 var(--body);color:var(--warn);margin-top:3px}
+.dupbox{margin-top:8px;padding:10px 12px;border-radius:8px;border:1.5px solid var(--warn);background:var(--warn-soft);font-size:14px}
+.dupbox b{display:block;font:700 16px/1.2 var(--head);color:var(--warn);margin-bottom:4px}
+.dupbox .mono{font-size:12px;color:var(--muted);margin-top:6px}
+.dupbox .sub{font-size:13px;color:var(--muted);margin-top:8px}
+/* experience time */
+.xp{display:grid;gap:12px;margin-top:16px}
+.xp .r{display:grid;grid-template-columns:3.2em 1fr;gap:4px 10px;align-items:center}
+.xp .r b{font:800 18px/1 var(--head);grid-row:1/3}
+.xp .r small{color:var(--muted);font-size:13px}
+.xp .r.met small{color:var(--ok);font-weight:600}
+.months{display:grid;grid-template-columns:repeat(12,1fr);gap:3px;margin-top:8px}
+.months i{height:22px;border-radius:3px;border:1.5px solid var(--line);font:600 9.5px/19px var(--head);text-align:center;font-style:normal;color:var(--muted)}
+.months i.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
 .cvkey{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--muted);margin-top:10px}
 .cvkey span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px;border:1.5px solid var(--line)}
 .cvkey .k0::before{border:1.5px dashed var(--danger)}.cvkey .k1::before{background:var(--warn);border-color:var(--warn)}
@@ -274,6 +288,7 @@ ol.steps b{display:block;font:700 16.5px/1.25 var(--head);margin-bottom:2px}
     <legend>Task detail</legend>
     <label>Task <span class="opt">(what you did)</span></label>
     <textarea id="fTask" rows="2" placeholder="e.g. Removed and refitted No.1 engine starter-generator"></textarea>
+    <div class="dupbox" id="dupBox" hidden></div>
     <label>Reason</label>
     <input id="fReason" placeholder="e.g. Scheduled maintenance">
     <div class="chips" id="reasonChips" style="margin-top:8px"></div>
@@ -309,6 +324,10 @@ ol.steps b{display:block;font:700 16.5px/1.25 var(--head);margin-bottom:2px}
   <details class="cov" id="covBox" open>
     <summary><b>ATA coverage</b><span id="covSum"></span></summary>
     <div class="body" id="covBody"></div>
+  </details>
+  <details class="cov" id="expBox" open>
+    <summary><b>Experience time</b><span id="expSum"></span></summary>
+    <div class="body" id="expBody"></div>
   </details>
   <div class="card">
     <div class="row">
@@ -444,6 +463,21 @@ const LICENCES = {
     other:['21','25','26','27','28','29','30','33','35','36','38','44','45','46','49','73','77']}
 };
 const TARGETS = {main:[5,10],other:[2,5]};
+// Activity types that show more than routine work (component change, testing, fault finding, repair, mods, wiring)
+const VARIED = new Set(['R/I','FOT','TS','REP','MOD','EW']);
+// Part-66 (66.A.30) basic experience in years, by route: [no previous technical training, relevant technical training, Part-147 basic course]
+const EXP_YEARS = {'B1.1':[5,3,2],'B1.3':[5,3,2],'B2':[5,3,2],'B1.2':[3,2,1],'B1.4':[3,2,1]};
+const ROUTES = [['none','No previous technical training'],['skilled','Relevant technical training (skilled worker)'],['p147','UK Part-147 approved basic training course']];
+/* Two task descriptions count as the same task if they match exactly, or share most of their key words */
+const STOP = new Set(['and','the','with','for','iaw','was','were','carried','out','from','into','per','using','of','on','in','to','a','an','no','nil']);
+const keyWords = t => new Set(String(t||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').split(' ').filter(w=>w.length>1&&!STOP.has(w)));
+function sameTask(a,b){
+  if(compact(a)&&compact(a)===compact(b)) return true;
+  const A=keyWords(a),B=keyWords(b);
+  if(A.size<3||B.size<3) return false;
+  let both=0;for(const w of A) if(B.has(w)) both++;
+  return both/(A.size+B.size-both)>=0.6;
+}
 const MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
 
 /* ---------- template geometry (points, measured from top of the A4-landscape CAA page) ---------- */
@@ -874,7 +908,16 @@ function pageSpace(e){
   const last=pages[pages.length-1];
   return {used:last?last.used:0,n:last?last.n:1,of:pages.length,ata:e.ata,type:typeLabel(acById(e.aircraftId))};
 }
+function updateDup(e){
+  const box=$('dupBox');
+  const hits=e.ata&&e.task?live(S.entries).filter(x=>x.id!==editingId&&x.ata===e.ata&&sameTask(x.task,e.task)):[];
+  box.hidden=!hits.length;
+  if(!hits.length) return;
+  box.innerHTML=`<b>Already logged in ATA ${e.ata}</b>${hits.slice(0,3).map(x=>`<div class="mono">${fmtD(x.date)} ${esc(acById(x.aircraftId)?.reg||'')}</div><div>${esc(x.task)}</div>`).join('')}
+    <div class="sub">CAP 741 only needs each task once. A different component, test or fault on this system adds more to your logbook.</div>`;
+}
 async function updateFit(){
+  updateDup(formEntry());
   const box=$('fitBox');
   if(!MF){box.textContent='Checking fit…';await measureFonts();}
   const e=formEntry(),segs=taskSegs(e);
@@ -1114,9 +1157,11 @@ function readiness(k,by){
 function coverageStats(){
   const by=new Map();
   for(const e of live(S.entries)){
-    if(!by.has(e.ata)) by.set(e.ata,{n:0,tasks:new Set(),acts:new Set()});
-    const c=by.get(e.ata);c.n++;c.tasks.add(compact(e.task));(e.acts||[]).forEach(a=>c.acts.add(a));
+    if(!by.has(e.ata)) by.set(e.ata,{n:0,list:[],acts:new Set(),tasks:{size:0}});
+    const c=by.get(e.ata);c.n++;(e.acts||[]).forEach(a=>c.acts.add(a));
+    if(!c.list.some(t=>sameTask(t,e.task))){c.list.push(e.task);c.tasks.size++;}
   }
+  for(const c of by.values()) c.routine=![...c.acts].some(a=>VARIED.has(a));
   return by;
 }
 function renderCoverage(){
@@ -1133,9 +1178,10 @@ function renderCoverage(){
     const s=by.get(c),n=s?s.tasks.size:0,[lo,hi]=tier?TARGETS[tier]:[1,1];
     const lvl=!n?'none':n<lo?'low':n<hi?'ok':'full';
     const reps=s?s.n-n:0;
-    return `<button type="button" class="cv ${lvl}" data-ata="${c}" title="${n} distinct ${n===1?'task':'tasks'}${reps?`, ${reps} repeated`:''}">
+    return `<button type="button" class="cv ${lvl}" data-ata="${c}" title="${n} distinct ${n===1?'task':'tasks'}${reps?`, ${reps} repeated`:''}${s&&s.routine?'. Only routine tasks so far: add a removal/installation, functional test or troubleshooting task':''}">
       <span class="c">${c}</span><span class="ct">${n}${tier?`<small>/${lo}</small>`:''}</span>
       <span class="nm">${esc(ATA_NAME[c]||'')}</span>${sel.length>1&&tier==='main'?`<span class="for">Main for ${esc(needs[c].join(', '))}</span>`:''}${s?`<span class="ac">${esc(ACTS.map(a=>a[0]).filter(a=>s.acts.has(a)).join(' '))}</span>`:''}
+      ${s&&s.routine?'<span class="flag">Routine only</span>':reps?`<span class="flag">${reps} repeat${reps>1?'s':''}</span>`:''}
       <i style="--p:${Math.min(100,Math.round(n/lo*100))}%"></i></button>`;
   };
   const listed=new Set([...lic.main,...lic.other]);
@@ -1159,7 +1205,7 @@ function renderCoverage(){
     const b=e.target.closest('[data-k]');if(!b)return;
     const k=b.dataset.k,next=sel.includes(k)?sel.filter(x=>x!==k):[...sel,k];
     if(!next.length){toast('Pick at least one licence');return;}
-    await setSetting('licences',Object.keys(LICENCES).filter(x=>next.includes(x)));renderCoverage();
+    await setSetting('licences',Object.keys(LICENCES).filter(x=>next.includes(x)));renderCoverage();renderExperience();
   };
 }
 $('covBody').addEventListener('click',e=>{
@@ -1171,8 +1217,48 @@ $('covBody').addEventListener('click',e=>{
 try{if(localStorage.getItem('covClosed')==='1')$('covBox').open=false;}catch(e){}
 $('covBox').addEventListener('toggle',()=>{try{localStorage.setItem('covClosed',$('covBox').open?'0':'1');}catch(e){}});
 
+/* ---------- experience time (66.A.30 basic experience) ---------- */
+const isoAddYears=(iso,y)=>{const [a,b,c]=iso.split('-').map(Number);const d=new Date(Date.UTC(a+y,b-1,c));return d.toISOString().slice(0,10);};
+function monthsBetween(a,b){
+  const [y1,m1,d1]=a.split('-').map(Number),[y2,m2,d2]=b.split('-').map(Number);
+  return Math.max(0,(y2-y1)*12+(m2-m1)-(d2<d1?1:0));
+}
+const ym=m=>`${Math.floor(m/12)?Math.floor(m/12)+(Math.floor(m/12)===1?' year':' years'):''}${Math.floor(m/12)&&m%12?' ':''}${m%12||!m?m%12+(m%12===1?' month':' months'):''}`;
+const longDate=iso=>new Date(iso+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+function renderExperience(){
+  const all=live(S.entries),first=all.map(e=>e.date).sort()[0];
+  const start=S.settings.expStart||first||'',route=S.settings.route||'none',ri=ROUTES.findIndex(r=>r[0]===route),today=todayISO();
+  const done=start?monthsBetween(start,today):0;
+  const rows=licences().map(k=>{
+    const yrs=EXP_YEARS[k][Math.max(0,ri)],due=start?isoAddYears(start,yrs):'',met=start&&due<=today;
+    const pct=start?Math.min(100,Math.round(done/(yrs*12)*100)):0;
+    return {k,yrs,due,met,pct};
+  });
+  // last 12 calendar months, oldest first: which had at least one entry
+  const now=new Date(),months=[];
+  for(let i=11;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);months.push({key:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'),lab:MONTHS[d.getMonth()][0]});}
+  const active=new Set(all.map(e=>e.date.slice(0,7)));
+  const recent=months.filter(m=>active.has(m.key)).length;
+  $('expSum').textContent=start?`${ym(done)} so far. `+rows.map(r=>`${r.k} ${r.met?'met':r.pct+'%'}`).join(', '):'Add an entry or a start date to begin counting';
+  $('expBody').innerHTML=`
+    <label style="margin-top:0" for="xpRoute">Your route to the licence</label>
+    <select id="xpRoute">${ROUTES.map(([v,l])=>`<option value="${v}"${v===route?' selected':''}>${esc(l)}</option>`).join('')}</select>
+    <label for="xpStart">Experience started</label><input type="date" id="xpStart" value="${start}" max="${today}">
+    <div class="hint">${S.settings.expStart?'Set by you.':first?`Taken from your first entry (${longDate(first)}). Set it earlier if you started maintenance work before you began logging.`:''}</div>
+    <div class="xp">${rows.map(r=>`<div class="r${r.met?' met':''}"><b>${r.k}</b><div class="rbar"><i style="width:${r.pct}%"></i></div>
+      <small>${!start?`${r.yrs} years needed`:r.met?`${r.yrs} years needed: met on ${longDate(r.due)}`:`${ym(done)} of ${r.yrs} years. Reached ${longDate(r.due)}`}</small></div>`).join('')}</div>
+    <label>Recent experience <span class="opt">(months with entries, last 12)</span></label>
+    <div class="months">${months.map(m=>`<i class="${active.has(m.key)?'on':''}" title="${m.key}">${m.lab}</i>`).join('')}</div>
+    <div class="hint">${recent} of the last 12 months have entries. At least one year of your experience must be recent work on the category you're applying for.</div>
+    <div class="hint" style="margin-top:12px">Basic experience under Part-66 66.A.30: B1.1, B1.3 and B2 need 5 years with no previous technical training, 3 years with relevant technical training, or 2 years after a Part-147 basic course. B1.2 and B1.4 need 3, 2 or 1 years. This counts calendar time from your start date. Check the CAA's current rules for your route before you apply.</div>`;
+  $('xpStart').onchange=async()=>{const v=$('xpStart').value;await setSetting('expStart',v&&v!==first?v:'');renderExperience();};
+  $('xpRoute').onchange=async()=>{await setSetting('route',$('xpRoute').value);renderExperience();};
+}
+try{if(localStorage.getItem('expClosed')==='1')$('expBox').open=false;}catch(e){}
+$('expBox').addEventListener('toggle',()=>{try{localStorage.setItem('expClosed',$('expBox').open?'0':'1');}catch(e){}});
+
 function renderBook(){
-  renderCoverage();
+  renderCoverage();renderExperience();
   const all=live(S.entries);
   const types=[...new Set(all.map(e=>typeLabel(acById(e.aircraftId))))].sort();
   const atas=[...new Set(all.map(e=>e.ata))].sort((a,b)=>+a- +b);
@@ -1189,6 +1275,10 @@ function renderBook(){
   if(!S.settings.ownerName) w.push('Add your name in Settings so it prints on every page.');
   if(noSup) w.push(`${noSup} ${noSup===1?'entry has':'entries have'} no supervisor.`);
   if(badSup.length) w.push(`Licence details missing for ${badSup.map(s=>esc(s.name)).join(', ')}.`);
+  const cov=coverageStats(),routine=[...cov.entries()].filter(([,c])=>c.routine).map(([a])=>a).sort((a,b)=>+a- +b);
+  const reps=[...cov.values()].reduce((n,c)=>n+c.n-c.tasks.size,0);
+  if(reps) w.push(`${reps} ${reps===1?'entry repeats a task':'entries repeat tasks'} already logged in the same chapter. CAP 741 only needs each task once, so consider swapping ${reps===1?'it':'them'} for something different.`);
+  if(routine.length) w.push(`Only routine tasks so far in ATA ${routine.join(', ')}. Add a removal/installation, functional test or troubleshooting task to show depth.`);
   if(tooLong) w.push(`${tooLong} task ${tooLong===1?'description is':'descriptions are'} longer than a whole page and will be cut off.`);
   $('xWarn').innerHTML=w.map(x=>`<div class="warnbox">${x}</div>`).join('');
   $('xSummary').textContent=es.length?`${es.length} ${es.length===1?'entry':'entries'} on ${pages.length} task ${pages.length===1?'page':'pages'}${$('xSig').checked?` plus ${Math.max(1,Math.ceil(sups.length/SIGS_PER_PAGE))} signature sheet`:''}, sorted by ATA chapter.`:'';
