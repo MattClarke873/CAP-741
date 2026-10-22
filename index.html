@@ -44,6 +44,8 @@ header{position:sticky;top:0;z-index:5;background:var(--bar);color:var(--bar-ink
 header .brand{flex:1;min-width:0;line-height:1.05}
 header h1{font:800 24px/1 var(--head);margin:0;letter-spacing:.01em}
 header p{margin:2px 0 0;font:500 13px/1.2 var(--head);color:var(--bar-muted)}
+.helplink{background:none;border:0;padding:6px 2px;color:var(--bar-muted);font:600 14px/1 var(--head);letter-spacing:.02em;cursor:pointer;text-decoration:underline;text-decoration-color:rgba(255,255,255,.25);text-underline-offset:3px}
+.helplink:hover,.helplink:focus-visible{color:var(--bar-ink)}
 .pill{font:600 13px/1 var(--head);padding:7px 11px;border-radius:99px;background:rgba(255,255,255,.09);white-space:nowrap;border:1px solid rgba(255,255,255,.14);color:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
 .pill::before{content:"";width:8px;height:8px;border-radius:50%;background:#8b9893}
 .pill.ok::before{background:#9bd07a}.pill.warn::before{background:#f0b35a}
@@ -272,6 +274,7 @@ ol.steps b{display:block;font:700 16.5px/1.25 var(--head);margin-bottom:2px}
 <body>
 <header>
   <div class="brand"><h1>CAP 741</h1><p>Section 3.1 maintenance experience</p></div>
+  <button class="helplink" id="helpBtn" type="button">Help</button>
   <button class="pill off" id="syncPill" type="button">On phone</button>
 </header>
 
@@ -1548,8 +1551,8 @@ async function saveDev(){await idb.set('device',DEV);}
 
 function dbxGuide(){
   // Steps 1–4 happen on dropbox.com; mark them done once a key has been pasted, then track the connect/allow steps.
-  const st=i=>{const hasKey=!!appKey();if(i<=4)return hasKey?'done':'';if(i===5)return DEV.verifier?'done':hasKey?'now':'';return DEV.verifier?'now':'';};
-  return `<details class="guide"${DEV.verifier?'':' open'}>
+  const st=i=>{const hasKey=!!appKey();if(i<=4)return hasKey?'done':'';if(i===5)return DEV.opened?'done':hasKey?'now':'';return DEV.opened?'now':'';};
+  return `<details class="guide"${DEV.opened?'':' open'}>
     <summary>Set up Dropbox step by step</summary>
     <ol class="steps">
       <li class="${st(1)}"><b>Open the Dropbox App Console</b>Go to <a href="https://www.dropbox.com/developers/apps" target="_blank" rel="noopener">dropbox.com/developers/apps</a> and sign in with your normal Dropbox account. On iPhone the page is easier to use with Safari's <i>Request Desktop Website</i> (the <i>aA</i> button).</li>
@@ -1576,29 +1579,42 @@ function renderDbx(){
     <div class="hint" style="margin-top:0">Keeps this phone and your other devices in step through a private folder in your Dropbox. It works offline, and changes sync when you have signal. Setting it up takes about five minutes.</div>
     ${dbxGuide()}
     <label>Dropbox App key</label><input id="dKey" class="mono" value="${esc(appKey())}" placeholder="Paste from the Settings tab of your Dropbox app" autocapitalize="off" autocorrect="off" spellcheck="false">
-    <div class="btns"><button class="btn" id="dGo" type="button">Connect Dropbox</button></div>
-    <div id="dStep2" style="display:${DEV.verifier?'block':'none'}">
+    <div class="btns"><a class="btn" id="dGo" href="#" target="_blank" rel="noopener">Connect Dropbox</a></div>
+    <div id="dStep2" style="display:${DEV.opened?'block':'none'}">
       <label>Code from Dropbox</label><input id="dCode" class="mono" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Paste the code shown after you tap Allow">
       <div class="btns"><button class="btn" id="dFinish" type="button">Finish connecting</button></div>
     </div>`;
   c.querySelectorAll('[data-copy]').forEach(b=>b.onclick=async()=>{
     try{await navigator.clipboard.writeText(b.dataset.copy);b.classList.add('done');toast('Copied '+b.dataset.copy);}catch(e){toast('Copy failed. Type it in instead.');}
   });
-  $('dGo').onclick=async()=>{
-    const key=$('dKey').value.trim();if(!key){toast('Paste your Dropbox App key first. Steps 1 to 4 show where to find it.',3500);c.querySelector('.guide').open=true;return;}
-    DEV.appKey=key;
-    const rnd=crypto.getRandomValues(new Uint8Array(48));DEV.verifier=b64url(rnd);
+  /* The Dropbox link is built before it's tapped. iPhone Safari blocks any new tab that isn't
+     opened straight from a tap, so the secure code can't be worked out after the tap. */
+  let prepT;
+  const prepLink=async()=>{
+    const a=$('dGo'),key=$('dKey').value.trim();
+    if(!key){a.setAttribute('href','#');return;}
+    if(key!==DEV.appKey||!DEV.verifier){DEV.appKey=key;DEV.verifier=b64url(crypto.getRandomValues(new Uint8Array(48)));await saveDev();}
     const ch=b64url(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(DEV.verifier)));
-    await saveDev();
-    const u=`https://www.dropbox.com/oauth2/authorize?client_id=${encodeURIComponent(key)}&response_type=code&code_challenge=${ch}&code_challenge_method=S256&token_access_type=offline`;
-    window.open(u,'_blank');renderDbx();
+    a.href=`https://www.dropbox.com/oauth2/authorize?client_id=${encodeURIComponent(key)}&response_type=code&code_challenge=${ch}&code_challenge_method=S256&token_access_type=offline`;
+  };
+  $('dKey').addEventListener('input',()=>{clearTimeout(prepT);$('dGo').setAttribute('href','#');prepT=setTimeout(prepLink,300);});
+  prepLink();
+  $('dGo').onclick=e=>{
+    if($('dGo').getAttribute('href')==='#'){
+      e.preventDefault();
+      if(!$('dKey').value.trim()){toast('Paste your Dropbox App key first. Steps 1 to 4 show where to find it.',3500);c.querySelector('.guide').open=true;}
+      else toast('One moment, then tap Connect Dropbox again');
+      return;
+    }
+    $('dStep2').style.display='block';   // let the tap open Dropbox; don't redraw under it
+    DEV.opened=true;saveDev();
   };
   if($('dFinish')) $('dFinish').onclick=async()=>{
     const code=$('dCode').value.trim();if(!code){toast('Paste the code from Dropbox');return;}
     try{
       const r=await fetch('https://api.dropboxapi.com/oauth2/token',{method:'POST',body:new URLSearchParams({code,grant_type:'authorization_code',code_verifier:DEV.verifier,client_id:appKey()})});
       const j=await r.json();if(!r.ok)throw new Error(j.error_description||j.error||r.status);
-      DEV.refresh=j.refresh_token;DEV.access=j.access_token;DEV.exp=now()+(j.expires_in-60)*1000;delete DEV.verifier;await saveDev();
+      DEV.refresh=j.refresh_token;DEV.access=j.access_token;DEV.exp=now()+(j.expires_in-60)*1000;delete DEV.verifier;delete DEV.opened;await saveDev();
       toast('Dropbox connected');renderDbx();sync(true);
     }catch(err){alert('Dropbox connection failed: '+err.message+'\nCheck step 3 (permissions), then tap Connect Dropbox again.');}
   };
@@ -1640,6 +1656,34 @@ function setPill(txt,cls){
   p.textContent=txt;p.className='pill '+cls;
 }
 $('syncPill').onclick=()=>DEV.refresh?sync(true):show('set');
+
+/* ---------- help / contact ----------
+   A static site can't send mail itself, so the form opens the person's email app with the
+   message already written and addressed; they just tap Send. */
+const HELP_EMAIL='ma77c@proton.me';
+const helpMailto=(topic,body)=>`mailto:${HELP_EMAIL}?subject=${encodeURIComponent('CAP 741 Log: '+topic)}&body=${encodeURIComponent(body)}`;
+$('helpBtn').onclick=()=>openModal('Help and contact',`
+  <p>Got a question, found a problem or have an idea? Send it here and it comes straight to me.</p>
+  <label for="hTopic">What's it about?</label>
+  <select id="hTopic"><option>A question</option><option>Something isn't working</option><option>An idea for the app</option><option>Dropbox sync</option><option>Printing / PDF</option></select>
+  <label for="hName">Your name <span class="opt">(optional)</span></label><input id="hName" autocapitalize="words" value="${esc(S.settings.ownerName||'')}">
+  <label for="hMsg">Message</label><textarea id="hMsg" rows="6" placeholder="Tell me as much as you can. If something's broken, what did you tap and what happened?"></textarea>
+  <label class="check"><input type="checkbox" id="hInfo" checked> Include app details (how many entries, Dropbox status, phone type) to help me look into it</label>
+  <div class="btns"><button class="btn" id="hSend" type="button">Write email</button></div>
+  <div class="hint">This opens your email app with the message ready to send to ${HELP_EMAIL}. Nothing is sent until you tap Send there.</div>`,
+()=>{
+  $('hSend').onclick=()=>{
+    const msg=$('hMsg').value.trim();if(!msg){toast('Add a message first');$('hMsg').focus();return;}
+    const topic=$('hTopic').value,name=$('hName').value.trim();
+    let body=msg+(name?`\n\n${name}`:'');
+    if($('hInfo').checked){
+      const sw=navigator.serviceWorker?.controller?'offline cache on':'offline cache off';
+      body+=`\n\n---\nCAP 741 Log details\nEntries: ${live(S.entries).length}, aircraft: ${live(S.aircraft).length}, supervisors: ${live(S.supervisors).length}\nDropbox: ${DEV.refresh?'connected':'not connected'}, ${sw}\nDevice: ${navigator.userAgent}`;
+    }
+    location.href=helpMailto(topic,body);
+    closeModal();toast('Opening your email app…');
+  };
+});
 window.addEventListener('online',()=>sync());
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')sync();});
 
