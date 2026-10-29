@@ -440,7 +440,7 @@ nav button{font-size:12px}
     <div class="hint" id="xSummary"></div>
     </div>
     <div class="only-cur">
-    <div class="btns"><button class="btn block" id="btnCsv" type="button">Download spreadsheet (CSV)</button></div>
+    <div class="btns"><button class="btn" id="btnWorkPdf" type="button">Download PDF</button><button class="btn sec" id="btnCsv" type="button">Download CSV</button></div>
     <div class="hint" id="cSummary"></div>
     </div>
   </div>
@@ -485,9 +485,10 @@ nav button{font-size:12px}
     <label style="margin-top:0">Logbook owner's name <span class="opt">(printed on every page)</span></label>
     <input id="sOwner" autocapitalize="words">
     <div class="row"><div><label>Your licence cat.</label><input id="sOwnerCat" placeholder="B1.3"></div>
-    <div><label>Your licence number</label><input id="sOwnerLic" class="mono" autocapitalize="characters" placeholder="UK.66.…"></div></div>
+    <div><label>Your stamp number</label><input id="sOwnerStamp" class="mono" autocapitalize="characters" placeholder="e.g. 189"></div></div>
+    <label>Your licence number</label><input id="sOwnerLic" class="mono" autocapitalize="characters" placeholder="UK.66.…">
     <label>Your MRO &amp; approval number</label><input id="sOwnerMro" placeholder="Type a company, town or UK.145 number">
-    <div class="hint">Used when you mark a job as certification: your name and licence go in the supervisor box, and you're added to the signature sheet.</div>
+    <div class="hint">Used when you mark a job as certification: your name, licence and stamp number go in the supervisor box, and you're added to the signature sheet. The Work log PDF prints them next to every job.</div>
   </div>
 
   <h3>Pages and printing</h3>
@@ -669,7 +670,7 @@ const ataLabel = c => c ? `${c} - ${ATA_NAME[c]||''}` : '';
 const groupKey = e => e.ata+'|'+typeLabel(acById(e.aircraftId));
 const contMark = () => S.settings.contMark||'"';
 const isCert = e => e.purpose==='certification';
-const ownerSigner = () => ({name:S.settings.ownerName||'',cat:S.settings.ownerCat||'',licNo:S.settings.ownerLic||'',mro:S.settings.ownerMro||''});
+const ownerSigner = () => ({name:S.settings.ownerName||'',cat:S.settings.ownerCat||'',licNo:S.settings.ownerLic||'',mro:S.settings.ownerMro||'',stamp:S.settings.ownerStamp||''});
 const askPrintOn = () => S.settings.askPrint!==false;
 
 /* ---------- IndexedDB key/value store ---------- */
@@ -908,6 +909,7 @@ async function buildPdf(pages,withSig){
         drawBox(pg,[{t:s.name}],...SIG.cols.name,top,bot,o);
         drawBox(pg,[{t:s.mro||''}],...SIG.cols.mro,top,bot,o);
         drawBox(pg,[{t:s.cat||''}],...SIG.cols.cat,top,bot,o);
+        if(s.stamp) drawBox(pg,[{t:s.stamp}],...SIG.cols.stamp,top,bot,o);
         drawBox(pg,[{t:s.licNo||''}],...SIG.cols.lic,top,bot,o);
       });
       if(owner) line(pg,owner,SIG.owner.x,SIG.owner.base,SIG.owner.max,10);
@@ -933,7 +935,7 @@ async function buildPdf(pages,withSig){
         }
         // supervisor signs once, in the lowest row of the entry; rows above carry the mark
         if(j<L.k-1) drawMark(pg,C.sup,top,bot);
-        else if(sup) drawBox(pg,[{t:isCert(e)?[sup.name,[sup.licNo,sup.cat].filter(Boolean).join(' ')].filter(Boolean).join('\n'):sup.name}],C.sup[0],C.sup[1],top,bot,{valign:'bottom',sizes:[8,7.5,7,6.5,6]});
+        else if(sup) drawBox(pg,[{t:isCert(e)?[sup.name,[sup.licNo,sup.cat,sup.stamp&&'Stamp '+sup.stamp].filter(Boolean).join(' ')].filter(Boolean).join('\n'):sup.name}],C.sup[0],C.sup[1],top,bot,{valign:'bottom',sizes:[8,7.5,7,6.5,6]});
         drawLines(pg,rowLines(L,j),L,C.task[0],top);
       }
     });
@@ -1072,7 +1074,7 @@ function renderPurpose(){
 function updateCertNote(){
   const n=$('certNote');n.hidden=purpose!=='certification';if(n.hidden)return;
   const o=ownerSigner();
-  n.innerHTML=o.licNo?`<b>You certify this job</b>${esc(o.name||'Your name')}, ${esc(o.licNo)}${o.cat?' ('+esc(o.cat)+')':''} goes in the supervisor box.`
+  n.innerHTML=o.licNo?`<b>You certify this job</b>${esc(o.name||'Your name')}, ${esc(o.licNo)}${o.cat?' ('+esc(o.cat)+')':''}${o.stamp?', stamp '+esc(o.stamp):''} goes in the supervisor box.`
     :`<b>You certify this job</b>Your details go in the supervisor box. <button type="button" class="link" id="certSet">Add your licence number in Settings</button>`;
   const b=$('certSet');if(b)b.onclick=()=>show('set');
 }
@@ -1671,7 +1673,7 @@ function renderWorkLog(all){
   renderCurStats();
   const es=filteredEntries().sort((a,b)=>cmp(b.date,a.date)||(b.createdAt||0)-(a.createdAt||0));
   $('cSummary').textContent=es.length?`${es.length} ${es.length===1?'entry':'entries'}, newest first.`:'';
-  $('btnCsv').disabled=!es.length;
+  $('btnCsv').disabled=$('btnWorkPdf').disabled=!es.length;
   const groups=new Map();
   for(const e of es){const k=(e.date||'0000-00').slice(0,7);if(!groups.has(k))groups.set(k,[]);groups.get(k).push(e);}
   $('bookList').innerHTML=es.length?[...groups.entries()].map(([k,list])=>`
@@ -1687,7 +1689,107 @@ $('btnCsv').onclick=async()=>{
   const es=filteredEntries().sort((a,b)=>cmp(a.date,b.date));
   const rows=[['Date','Reg','Aircraft type','ATA','Job card','Activity','Role','Hours','Task','Fault / defect','Rectification','Parts','Manual ref','Tooling','Notes']];
   for(const e of es){const ac=acById(e.aircraftId);rows.push([fmtD(e.date),ac?.reg,typeLabel(ac),e.ata?ataLabel(e.ata):'',e.job,(e.acts||[]).join(' '),e.role||'Certified (CRS)',e.hours,e.task,e.fault,e.rect,e.parts,e.manual,e.tooling,e.notes]);}
-  await deliver(new TextEncoder().encode('\ufeff'+toCsv(rows)),`work-log-${fmtD(todayISO())}.csv`,'text/csv');
+  // download straight to the phone (Files > Downloads on iPhone) rather than opening the share sheet
+  await deliver(new TextEncoder().encode('\ufeff'+toCsv(rows)),`work-log-${fmtD(todayISO())}.csv`,'text/csv',{share:false});
+  toast('CSV downloaded');
+};
+
+/* Work log PDF: an A4 landscape record of certified jobs, laid out like a CAP 741 page but for currency.
+   Page 1 opens with the licence holder's details and a 2-year recency summary (Part-66 66.A.20(b)(2)). */
+function recencyStats(){
+  const cut=isoMinusYears(2),rec=live(S.entries).filter(e=>e.date&&e.date>=cut);
+  const by=new Map();
+  for(const e of rec){const t=typeLabel(acById(e.aircraftId));if(!by.has(t))by.set(t,{d:new Set(),last:''});const o=by.get(t);o.d.add(e.date);if(e.date>o.last)o.last=e.date;}
+  return {cut,days:new Set(rec.map(e=>e.date)).size,months:new Set(rec.map(e=>e.date.slice(0,7))).size,hrs:rec.reduce((n,e)=>n+(+e.hours||0),0),
+    types:[...by.entries()].sort((a,b)=>pinRank(a[0])-pinRank(b[0])||cmp(b[1].last,a[1].last)).map(([t,o])=>({t,days:o.d.size,last:o.last}))};
+}
+async function buildWorkPdf(entries){
+  const {PDFDocument,StandardFonts,rgb}=PDFLib;
+  const doc=await PDFDocument.create();
+  const F={r:await doc.embedFont(StandardFonts.Helvetica),b:await doc.embedFont(StandardFonts.HelveticaBold)};
+  const W=841.89,H=595.28,M=30,INK=rgb(0.07,0.11,0.33),BLACK=rgb(0.1,0.12,0.13),GREY=rgb(0.38,0.42,0.45),RULE=rgb(0.7,0.74,0.77),FILL=rgb(0.92,0.94,0.95);
+  const st=S.settings,owner=st.ownerName||'',lic=st.ownerLic||'',cat=st.ownerCat||'',mro=st.ownerMro||'',stamp=st.ownerStamp||'';
+  // columns: [key, title, width]
+  const COLS=[['date','Date',50],['reg','A/C reg',72],['type','Aircraft type',108],['ata','ATA',30],['job','Job card',60],['act','Activity',44],['detail','Task detail',306],['hrs','Hours',34],['crs','CRS',78]];
+  const X={};let x=M;for(const [k,,w] of COLS){X[k]=[x,x+w];x+=w;}
+  const PAD=3.5,SZ=7.5,LH=SZ*1.18;
+  const txt=(pg,t,x,y,size,font=F.r,color=BLACK)=>pg.drawText(clean(t,F.r),{x,y:H-y,size,font,color});
+  const fitLine=(t,max,size,font=F.r)=>{t=clean(t,F.r);let s=size;while(s>5.5&&font.widthOfTextAtSize(t,s)>max)s-=0.5;return s;};
+  const cellLines=(segs,w)=>layout(tokenize(segs,F),SZ,w-PAD*2,F);
+  const detailSegs=e=>{const segs=[];if(e.task)segs.push({t:String(e.task).trim()+' '});
+    const add=(l,v)=>{if(v&&String(v).trim())segs.push({t:l,b:true},{t:String(v).trim()+' '});};
+    add('Reason: ',e.reason);add('Fault: ',e.fault);add('Fix: ',e.rect);add('Parts: ',e.parts);add('Ref: ',e.manual);add('Tooling: ',e.tooling);add('Notes: ',e.notes);return segs;};
+  const dates=entries.map(e=>e.date).filter(Boolean).sort();
+  const period=dates.length?`${fmtD(dates[0])} to ${fmtD(dates[dates.length-1])}`:'';
+  const ty=$('xType').value,at=$('xAta').value;
+  const scope=[ty&&('Aircraft type: '+ty),at&&('ATA '+ataLabel(at))].filter(Boolean).join('   ');
+  const pages=[];let pg,y;
+  const header=first=>{
+    pg=doc.addPage([W,H]);pages.push(pg);
+    txt(pg,'Work log: certified maintenance record',M,M+14,15,F.b);
+    const right=`Licence ${lic||'[add in Settings]'}${cat?'  Cat. '+cat:''}${stamp?'  Stamp '+stamp:''}`;
+    txt(pg,right,W-M-F.b.widthOfTextAtSize(clean(right,F.r),10),M+12,10,F.b);
+    y=M+30;
+    if(first){
+      txt(pg,'Name',M,y,8,F.r,GREY);txt(pg,owner||'[add in Settings]',M+30,y,10,F.r,INK);
+      txt(pg,'MRO',M+250,y,8,F.r,GREY);txt(pg,mro||'',M+272,y,10*Math.min(1,fitLine(mro,300,10)/10),F.r,INK);
+      txt(pg,'Period',W-M-210,y,8,F.r,GREY);txt(pg,period,W-M-178,y,10,F.r,INK);
+      y+=16;
+      if(scope){txt(pg,scope,M,y,8.5,F.r,GREY);y+=13;}
+      // recency box
+      const r=recencyStats(),bx=M,bw=W-M*2,top=y;
+      const lines=[`Last 2 years (since ${fmtD(r.cut)}): ${r.days} days worked, ${r.months} months with work${r.hrs?`, ${+r.hrs.toFixed(1)} hours logged`:''}.`,
+        r.types.length?'By type: '+r.types.map(t=>`${t.t} ${t.days} ${t.days===1?'day':'days'}, last ${fmtD(t.last)}`).join(';  '):'',
+        'Part-66 66.A.20(b)(2): licence privileges need 6 months of relevant maintenance experience in the preceding 2 years. Counts include CAP 741 experience entries.'].filter(Boolean);
+      const wrapped=lines.flatMap((l,i)=>layout(tokenize([{t:l,b:i===0}],F),8.5,bw-16,F));
+      const bh=12+wrapped.length*10.5;
+      pg.drawRectangle({x:bx,y:H-top-bh,width:bw,height:bh,color:FILL,borderColor:RULE,borderWidth:0.75});
+      wrapped.forEach((ln,i)=>ln.forEach(t=>pg.drawText(t.w,{x:bx+8+t.x,y:H-(top+12+i*10.5),size:8.5,font:t.b?F.b:F.r,color:BLACK})));
+      y=top+bh+10;
+    }
+    // table header row
+    pg.drawRectangle({x:M,y:H-y-16,width:W-M*2,height:16,color:FILL});
+    for(const [k,t] of COLS) txt(pg,t,X[k][0]+PAD,y+11,8,F.b);
+    pg.drawLine({start:{x:M,y:H-y},end:{x:W-M,y:H-y},thickness:1,color:BLACK});
+    pg.drawLine({start:{x:M,y:H-y-16},end:{x:W-M,y:H-y-16},thickness:0.75,color:BLACK});
+    y+=16;
+  };
+  const BOTTOM=H-M-34;
+  header(true);
+  for(const e of entries){
+    const ac=acById(e.aircraftId);
+    const cells={date:[{t:fmtD(e.date)}],reg:[{t:ac?.reg||''}],type:[{t:typeLabel(ac)}],ata:[{t:e.ata||''}],job:[{t:e.job||''}],
+      act:[{t:(e.acts||[]).join(' ')}],detail:detailSegs(e),hrs:[{t:e.hours!==''&&e.hours!=null?String(e.hours):''}],
+      crs:[{t:'CRS ',b:true},{t:lic||''},...(stamp?[{t:'\nStamp ',b:true},{t:stamp}]:[])]};
+    const L={};let n=1;for(const [k,,w] of COLS){L[k]=cellLines(cells[k],w);n=Math.max(n,L[k].length);}
+    const maxLines=Math.floor((BOTTOM-(M+60)-PAD*2)/LH);
+    if(n>maxLines){L.detail=L.detail.slice(0,maxLines);n=maxLines;}
+    const rh=n*LH+PAD*2+1;
+    if(y+rh>BOTTOM) header(false);
+    for(const [k] of COLS) L[k].forEach((ln,i)=>ln.forEach(t=>pg.drawText(t.w,{x:X[k][0]+PAD+t.x,y:H-(y+PAD+SZ*0.85+i*LH),size:SZ,font:t.b?F.b:F.r,color:k==='crs'?rgb(0.66,0.07,0.16):INK})));
+    y+=rh;
+    pg.drawLine({start:{x:M,y:H-y},end:{x:W-M,y:H-y},thickness:0.4,color:RULE});
+  }
+  // footers, once the page count is known
+  const made=fmtD(todayISO());
+  pages.forEach((p,i)=>{
+    p.drawLine({start:{x:M,y:M+20},end:{x:W-M,y:M+20},thickness:0.5,color:RULE});
+    p.drawText(clean(`Signature ..............................................   Date ....................      ${entries.length} certified ${entries.length===1?'job':'jobs'}, printed ${made}`,F.r),{x:M,y:M+6,size:8,font:F.r,color:GREY});
+    const pn=`Page ${i+1} of ${pages.length}`;p.drawText(pn,{x:W-M-F.r.widthOfTextAtSize(pn,8),y:M+6,size:8,font:F.r,color:GREY});
+  });
+  doc.setTitle('Work log'+(owner?' - '+owner:''));doc.setCreator('CAP 741 Log');
+  return doc.save();
+}
+$('btnWorkPdf').onclick=async()=>{
+  const b=$('btnWorkPdf'),label=b.textContent;b.disabled=true;b.textContent='Building PDF…';
+  try{
+    const es=filteredEntries().sort((a,b)=>cmp(a.date,b.date)||(a.createdAt||0)-(b.createdAt||0));
+    const bytes=await buildWorkPdf(es);
+    const who=(S.settings.ownerName||'logbook').replace(/[^A-Za-z0-9]+/g,'-');
+    await deliver(bytes,`Work-log-${who}-${fmtD(todayISO())}.pdf`,'application/pdf',{share:false});
+    toast('PDF downloaded');
+  }catch(err){console.error(err);alert('PDF download failed: '+err.message);}
+  b.disabled=false;b.textContent=label;
 };
 
 /* ---------- SEARCH (both logs) ---------- */
@@ -1735,8 +1837,8 @@ $('qResults').addEventListener('click',e=>{const r=e.target.closest('.sres');if(
 
 /* ---------- SETTINGS ---------- */
 $('sOwner').addEventListener('change',async()=>{await setSetting('ownerName',$('sOwner').value.trim());toast('Saved');});
-[['sOwnerCat','ownerCat'],['sOwnerLic','ownerLic'],['sOwnerMro','ownerMro']].forEach(([id,k])=>$(id).addEventListener('change',async()=>{
-  let v=$(id).value.trim();if(k==='ownerLic')v=v.toUpperCase();await setSetting(k,v);updateCertNote();toast('Saved');}));
+[['sOwnerCat','ownerCat'],['sOwnerLic','ownerLic'],['sOwnerMro','ownerMro'],['sOwnerStamp','ownerStamp']].forEach(([id,k])=>$(id).addEventListener('change',async()=>{
+  let v=$(id).value.trim();if(k==='ownerLic'||k==='ownerStamp')v=v.toUpperCase();await setSetting(k,v);updateCertNote();toast('Saved');}));
 attachSuggest($('sOwnerMro'),{list:'part145-orgs',find:findOrgs,
   row:it=>`<b>${esc(it.name)}</b><small>${esc(it.ref)}${it.town?', '+esc(it.town):''}</small>`,
   pick:async it=>{$('sOwnerMro').value=`${it.name} ${it.ref}`;await setSetting('ownerMro',$('sOwnerMro').value);toast('Saved');}});
@@ -1772,7 +1874,7 @@ $('btnTplReset').onclick=async()=>{await idb.del('template');renderSettings();to
 
 async function renderSettings(){
   $('sOwner').value=S.settings.ownerName||'';
-  $('sOwnerCat').value=S.settings.ownerCat||'';$('sOwnerLic').value=S.settings.ownerLic||'';$('sOwnerMro').value=S.settings.ownerMro||'';
+  $('sOwnerCat').value=S.settings.ownerCat||'';$('sOwnerLic').value=S.settings.ownerLic||'';$('sOwnerMro').value=S.settings.ownerMro||'';$('sOwnerStamp').value=S.settings.ownerStamp||'';
   $('sAskPrint').checked=askPrintOn();
   document.querySelectorAll('#sMark button').forEach(b=>b.classList.toggle('on',b.dataset.m===contMark()));
   const t=await idb.get('template');
