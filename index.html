@@ -321,11 +321,20 @@ nav button{font-size:12px}
 .shiftlist{margin-top:12px;padding:10px 12px;border-radius:8px;background:var(--card);border:1.5px dashed var(--line);font-size:14px}
 .shiftlist b{display:block;font:700 16px/1.2 var(--head);margin-bottom:4px}
 .shiftlist ol{margin:0;padding-left:20px}
-.implist{max-height:46vh;overflow:auto;border:1px solid var(--line);border-radius:8px;margin-top:12px}
-.implist label{display:flex;gap:10px;align-items:flex-start;margin:0;padding:9px 10px;border-bottom:1px solid var(--line);font-weight:400;font-size:14px}
-.implist label:last-child{border-bottom:0}
-.implist input{width:20px;height:20px;flex:0 0 auto;-webkit-appearance:auto;appearance:auto;accent-color:var(--accent);margin-top:1px}
-.implist .mono{font-size:12.5px;color:var(--muted)}
+.implist{max-height:58vh;overflow:auto;border:1px solid var(--line);border-radius:8px;margin-top:12px}
+.improw{padding:10px;border-bottom:1px solid var(--line)}
+.improw:last-child{border-bottom:0}
+.improw.clash{background:var(--warn-soft)}
+.imphead{display:flex;gap:10px;align-items:center;margin:0;font-weight:400}
+.imphead input{width:22px;height:22px;flex:0 0 auto;-webkit-appearance:auto;appearance:auto;accent-color:var(--accent);margin:0}
+.imphead .mono{font-size:12.5px;color:var(--muted)}
+.impdesc{margin-top:7px;padding:8px 10px;font-size:15px;min-height:0;line-height:1.3;resize:vertical}
+.impacts{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+.ia{border:1.5px solid var(--line);background:var(--field);color:var(--ink);border-radius:6px;padding:6px 8px;font:800 14px/1 var(--head);letter-spacing:.02em;cursor:pointer;min-width:44px}
+.ia.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.impconf{margin-top:8px;font-size:13.5px;border-left:3px solid var(--warn);padding:2px 0 2px 10px}
+.impconf b{display:block;color:var(--warn);font-weight:700}
+.impconf ul{margin:3px 0 4px;padding-left:18px}
 
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media (max-width:340px){.acts{grid-template-columns:repeat(2,1fr)}}
@@ -2010,7 +2019,6 @@ async function readJobReport(file){
       ata:ATA_NAME[a]?a:'',date:cellISO(g('date')),job:String(g('job')).trim().replace(/^0+(?=\d)/,'')};
   }).filter(r=>r.reg||r.desc);
 }
-const impRow=(r,i,on)=>`<label><input type="checkbox" data-imp="${i}"${on?' checked':''}><span><span class="mono">${fmtD(r.date)} ${esc(r.reg)}${r.job?' '+esc(r.job):''}${r.ata?' ATA '+r.ata:''}${r.acts.length?' '+r.acts.join(' '):''}</span><br>${esc(r.desc)}</span></label>`;
 function guessActs(t){
   t=t.toUpperCase();const a=[];
   if(/\bASB\b|\bSB\b|\bMOD\b|MODIFICATION/.test(t)) a.push('MOD');
@@ -2051,32 +2059,44 @@ $('jobFile').onchange=async ev=>{
   }
   const nNew=fresh.filter(r=>!r.skip).length,dupes=fresh.length-nNew;
   const newAcs=[...made.values()].filter(x=>x.newAc).map(x=>x.newAc);
+  // for each clash, the entries you already have on that date and work order
+  for(const r of fresh) r.clash=r.skip?(r.job?pool.filter(e=>e.date===r.date&&e.job&&woKey(e.job)===woKey(r.job)):pool.filter(e=>e.date===r.date&&compact(e.task).startsWith(compact(r.desc)))):[];
+  fresh.forEach(r=>{r.on=!r.skip;r.acts=new Set(r.acts);});
+  const card=(r,i)=>`<div class="improw${r.skip?' clash':''}" data-row="${i}">
+      <label class="imphead"><input type="checkbox" data-imp="${i}"${r.on?' checked':''}><span class="mono">${fmtD(r.date)} ${esc(r.reg)}${r.job?' WO '+esc(r.job):''}${r.ata?' ATA '+r.ata:''}</span></label>
+      <textarea class="impdesc" data-desc="${i}" rows="2" aria-label="Task description">${esc(r.desc)}</textarea>
+      <div class="impacts" role="group" aria-label="Activity type">${ACTS.map(([c,m])=>`<button type="button" class="ia${r.acts.has(c)?' on':''}" data-act="${c}" data-i="${i}" aria-pressed="${r.acts.has(c)}" title="${esc(m)}">${c}</button>`).join('')}</div>
+      ${r.skip?`<div class="impconf"><b>Already in your log on ${fmtD(r.date)}${r.job?', WO '+esc(r.job):''}:</b><ul>${r.clash.slice(0,4).map(e=>`<li>${esc(acById(e.aircraftId)?.reg||'')} ${esc(e.task||'')}${logOf(e)==='exp'?' (experience log)':''}</li>`).join('')}${r.clash.length>4?`<li>and ${r.clash.length-4} more</li>`:''}</ul>Left unticked, so it's discarded. Tick it to add it as well.</div>`:''}
+    </div>`;
   openModal('Import job report',`
-    <p><b>${esc(f.name)}</b>: ${rows.length} rows.</p>
-    <p>${nNew?`${nNew} new ${nNew===1?'job':'jobs'} to add to your work log.`:'Nothing new to add.'} ${dupes} ${dupes===1?'is':'are'} on a date and work order already in your log${blank?`, and ${blank} ${blank===1?'has':'have'} no description (such as "FROM TECH LOG PAGE")`:''}${nodate?`, and ${nodate} ${nodate===1?'has':'have'} no date`:''}. Those are skipped.</p>
+    <p><b>${esc(f.name)}</b>: ${rows.length} rows. ${nNew} new${dupes?`, ${dupes} clashing with jobs already in your log`:''}.${blank?` ${blank} with no description (such as "FROM TECH LOG PAGE") ${blank===1?'is':'are'} left out.`:''}${nodate?` ${nodate} with no date ${nodate===1?'is':'are'} left out.`:''}</p>
     ${newAcs.length?`<p>New aircraft that will be added: ${newAcs.map(a=>esc(a.reg)).join(', ')}. Check their type on the Aircraft tab afterwards.</p>`:''}
-    ${fresh.length?`${nNew?`<label class="check"><input type="checkbox" id="impAll" checked> Select all new jobs</label>
-    <div class="implist">${fresh.map((r,i)=>r.skip?'':impRow(r,i,true)).join('')}</div>
-    <div class="hint">Untick any you don't want, such as a task the report lists more than once. Activity types are a best guess from the wording.</div>`:''}
-    ${dupes?`<details style="margin-top:14px"><summary style="cursor:pointer;font-weight:600">Already on a job card in your log (${dupes}, skipped)</summary>
-      <div class="hint">You have an entry on the same date and work order for each of these. Tick any you still want to add.</div>
-      <div class="implist">${fresh.map((r,i)=>r.skip?impRow(r,i,false):'').join('')}</div></details>`:''}
-    <div class="btns"><button class="btn" id="impGo" type="button">Add ${nNew} ${nNew===1?'job':'jobs'}</button><button class="btn sec" id="impNo" type="button">Cancel</button></div>`
+    ${fresh.length?`<p class="hint" style="margin-top:8px">Tick the jobs to add. Activity types are guessed from the wording: tap to change them. You can edit a description before adding it.</p>
+    ${nNew?`<label class="check"><input type="checkbox" id="impAll" checked> Tick all new jobs</label>`:''}
+    <div class="implist">${fresh.map(card).join('')}</div>
+    <div class="btns"><button class="btn" id="impGo" type="button">Add jobs</button><button class="btn sec" id="impNo" type="button">Cancel</button></div>`
     :`<div class="btns"><button class="btn sec" id="impNo" type="button">Close</button></div>`}`,
   ()=>{
     $('impNo').onclick=closeModal;
     if(!fresh.length) return;
-    const boxes=()=>[...$('mBody').querySelectorAll('[data-imp]')];
-    const count=()=>{const n=boxes().filter(b=>b.checked).length;$('impGo').textContent=`Add ${n} ${n===1?'job':'jobs'}`;$('impGo').disabled=!n;};
+    const body=$('mBody');
+    const count=()=>{const n=fresh.filter(r=>r.on).length;$('impGo').textContent=`Add ${n} ${n===1?'job':'jobs'}`;$('impGo').disabled=!n;};
     count();
-    if($('impAll')) $('impAll').onchange=()=>{boxes().filter(b=>!fresh[+b.dataset.imp].skip).forEach(b=>b.checked=$('impAll').checked);count();};
-    $('mBody').addEventListener('change',e=>{if(e.target.dataset.imp!==undefined)count();});
+    if($('impAll')) $('impAll').onchange=()=>{fresh.forEach((r,i)=>{if(!r.skip){r.on=$('impAll').checked;body.querySelector(`[data-imp="${i}"]`).checked=r.on;}});count();};
+    body.addEventListener('change',e=>{const i=e.target.dataset.imp;if(i!==undefined){fresh[+i].on=e.target.checked;count();}});
+    body.addEventListener('input',e=>{const i=e.target.dataset.desc;if(i!==undefined)fresh[+i].desc=e.target.value;});
+    body.addEventListener('click',e=>{
+      const b=e.target.closest('.ia');if(!b)return;
+      const r=fresh[+b.dataset.i],c=b.dataset.act;
+      r.acts.has(c)?r.acts.delete(c):r.acts.add(c);
+      b.classList.toggle('on',r.acts.has(c));b.setAttribute('aria-pressed',r.acts.has(c));
+    });
     $('impGo').onclick=async()=>{
-      const pick=boxes().filter(b=>b.checked).map(b=>fresh[+b.dataset.imp]);
+      const pick=fresh.filter(r=>r.on&&r.desc.trim());
       const needAc=new Set(pick.map(r=>r.ac.id));
       for(const a of newAcs) if(needAc.has(a.id)) upsert(S.aircraft,{...a});
       const t0=now();
-      pick.forEach((r,i)=>upsert(S.entries,{id:uid(),createdAt:t0+i,log:'cur',role:'Certified (CRS)',purpose:'',acts:r.acts,date:r.date,aircraftId:r.ac.id,ata:r.ata,job:r.job,task:r.desc,
+      pick.forEach((r,i)=>upsert(S.entries,{id:uid(),createdAt:t0+i,log:'cur',role:'Certified (CRS)',purpose:'',acts:ACTS.map(a=>a[0]).filter(c=>r.acts.has(c)),date:r.date,aircraftId:r.ac.id,ata:r.ata,job:r.job,task:r.desc.trim(),
         reason:'',manual:'',tooling:'',challenges:'',result:'',supervisorId:'',fault:'',rect:'',parts:'',notes:'',hours:'',source:'import'}));
       await save();closeModal();refreshAll();
       toast(`Added ${pick.length} ${pick.length===1?'job':'jobs'} to your work log`,3500);
