@@ -2010,6 +2010,7 @@ async function readJobReport(file){
       ata:ATA_NAME[a]?a:'',date:cellISO(g('date')),job:String(g('job')).trim().replace(/^0+(?=\d)/,'')};
   }).filter(r=>r.reg||r.desc);
 }
+const impRow=(r,i,on)=>`<label><input type="checkbox" data-imp="${i}"${on?' checked':''}><span><span class="mono">${fmtD(r.date)} ${esc(r.reg)}${r.job?' '+esc(r.job):''}${r.ata?' ATA '+r.ata:''}${r.acts.length?' '+r.acts.join(' '):''}</span><br>${esc(r.desc)}</span></label>`;
 function guessActs(t){
   t=t.toUpperCase();const a=[];
   if(/\bASB\b|\bSB\b|\bMOD\b|MODIFICATION/.test(t)) a.push('MOD');
@@ -2036,31 +2037,39 @@ $('jobFile').onchange=async ev=>{
   const f=ev.target.files[0];ev.target.value='';if(!f)return;
   let rows;
   try{rows=await readJobReport(f);}catch(err){alert('Could not read that report: '+err.message);return;}
-  const pool=live(S.entries),used=new Set(),fresh=[],made=new Map();let dupes=0,blank=0,nodate=0;
+  /* A job counts as already logged when you have any entry on the same date with the same work order,
+     whatever its description says. Work orders compare by their digits, so 000000147968, 147968 and WO-147968 match.
+     A row with no work order falls back to the same date plus a task starting with the same words. */
+  const woKey=v=>{const d=String(v||'').replace(/\D/g,'').replace(/^0+/,'');return d||compact(v);};
+  const pool=live(S.entries),seen=new Set(pool.filter(e=>e.date&&e.job).map(e=>e.date+'|'+woKey(e.job)));
+  const fresh=[],made=new Map();let blank=0,nodate=0;
   for(const r of rows){
     if(!r.desc||/^FROM TECH LOG PAGE/i.test(r.desc)){blank++;continue;}
     if(!r.date){nodate++;continue;}
-    const cd=compact(r.desc);
-    const hit=pool.find(e=>!used.has(e.id)&&e.date===r.date&&String(e.job||'').replace(/^0+(?=\d)/,'')===r.job&&compact(e.task).startsWith(cd));
-    if(hit){used.add(hit.id);dupes++;continue;}
-    fresh.push({...r,ac:acForReport(r.reg,r.type,made),acts:guessActs(r.desc)});
+    const skip=r.job?seen.has(r.date+'|'+woKey(r.job)):pool.some(e=>e.date===r.date&&compact(e.task).startsWith(compact(r.desc)));
+    fresh.push({...r,skip,ac:acForReport(r.reg,r.type,made),acts:guessActs(r.desc)});
   }
+  const nNew=fresh.filter(r=>!r.skip).length,dupes=fresh.length-nNew;
   const newAcs=[...made.values()].filter(x=>x.newAc).map(x=>x.newAc);
   openModal('Import job report',`
     <p><b>${esc(f.name)}</b>: ${rows.length} rows.</p>
-    <p>${fresh.length?`${fresh.length} new ${fresh.length===1?'job':'jobs'} to add to your work log.`:'Nothing new to add.'} ${dupes} already in your log${blank?`, ${blank} with no description (such as "FROM TECH LOG PAGE")`:''}${nodate?`, ${nodate} with no date`:''} ${dupes+blank+nodate===1?'is':'are'} skipped.</p>
+    <p>${nNew?`${nNew} new ${nNew===1?'job':'jobs'} to add to your work log.`:'Nothing new to add.'} ${dupes} ${dupes===1?'is':'are'} on a date and work order already in your log${blank?`, and ${blank} ${blank===1?'has':'have'} no description (such as "FROM TECH LOG PAGE")`:''}${nodate?`, and ${nodate} ${nodate===1?'has':'have'} no date`:''}. Those are skipped.</p>
     ${newAcs.length?`<p>New aircraft that will be added: ${newAcs.map(a=>esc(a.reg)).join(', ')}. Check their type on the Aircraft tab afterwards.</p>`:''}
-    ${fresh.length?`<label class="check"><input type="checkbox" id="impAll" checked> Select all</label>
-    <div class="implist">${fresh.map((r,i)=>`<label><input type="checkbox" data-imp="${i}" checked><span><span class="mono">${fmtD(r.date)} ${esc(r.reg)}${r.job?' '+esc(r.job):''}${r.ata?' ATA '+r.ata:''}${r.acts.length?' '+r.acts.join(' '):''}</span><br>${esc(r.desc)}</span></label>`).join('')}</div>
-    <div class="hint">Untick any you don't want, such as a task the report lists more than once. Activity types are a best guess from the wording.</div>
-    <div class="btns"><button class="btn" id="impGo" type="button">Add ${fresh.length} ${fresh.length===1?'job':'jobs'}</button><button class="btn sec" id="impNo" type="button">Cancel</button></div>`
+    ${fresh.length?`${nNew?`<label class="check"><input type="checkbox" id="impAll" checked> Select all new jobs</label>
+    <div class="implist">${fresh.map((r,i)=>r.skip?'':impRow(r,i,true)).join('')}</div>
+    <div class="hint">Untick any you don't want, such as a task the report lists more than once. Activity types are a best guess from the wording.</div>`:''}
+    ${dupes?`<details style="margin-top:14px"><summary style="cursor:pointer;font-weight:600">Already on a job card in your log (${dupes}, skipped)</summary>
+      <div class="hint">You have an entry on the same date and work order for each of these. Tick any you still want to add.</div>
+      <div class="implist">${fresh.map((r,i)=>r.skip?impRow(r,i,false):'').join('')}</div></details>`:''}
+    <div class="btns"><button class="btn" id="impGo" type="button">Add ${nNew} ${nNew===1?'job':'jobs'}</button><button class="btn sec" id="impNo" type="button">Cancel</button></div>`
     :`<div class="btns"><button class="btn sec" id="impNo" type="button">Close</button></div>`}`,
   ()=>{
     $('impNo').onclick=closeModal;
     if(!fresh.length) return;
     const boxes=()=>[...$('mBody').querySelectorAll('[data-imp]')];
     const count=()=>{const n=boxes().filter(b=>b.checked).length;$('impGo').textContent=`Add ${n} ${n===1?'job':'jobs'}`;$('impGo').disabled=!n;};
-    $('impAll').onchange=()=>{boxes().forEach(b=>b.checked=$('impAll').checked);count();};
+    count();
+    if($('impAll')) $('impAll').onchange=()=>{boxes().filter(b=>!fresh[+b.dataset.imp].skip).forEach(b=>b.checked=$('impAll').checked);count();};
     $('mBody').addEventListener('change',e=>{if(e.target.dataset.imp!==undefined)count();});
     $('impGo').onclick=async()=>{
       const pick=boxes().filter(b=>b.checked).map(b=>fresh[+b.dataset.imp]);
