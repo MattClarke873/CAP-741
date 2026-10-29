@@ -1,6 +1,6 @@
 // Offline cache for the CAP 741 Log app.
 // Bump VERSION whenever you upload changed files so phones pick up the new copy.
-const VERSION = 'cap741-v7';
+const VERSION = 'cap741-v21';
 const FILES = [
   './',
   './index.html',
@@ -8,7 +8,9 @@ const FILES = [
   './cap741-template.pdf',
   './manifest.webmanifest',
   './icon-180.png',
-  './icon-512.png'
+  './icon-512.png',
+  './data/part66-types.json',
+  './data/part145-orgs.json'
 ];
 
 self.addEventListener('install', e => {

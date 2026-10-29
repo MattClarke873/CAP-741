@@ -46,6 +46,19 @@ No redirect URL is needed. Data syncs to `Apps/<your app name>/cap741-log.json`.
 - On the PDF, activity types are printed in full (e.g. *Removal / Installation*); the app keeps the short codes.
 - Print, sign every page yourself, and get each supervisor's signature and stamp in ink.
 
+### Work log (after you're licensed)
+The switch at the top of the Entry and Logbook tabs flips between **Experience** (CAP 741, green) and **Work log** (blue).
+- Work log entries are your own record of certified jobs, saved as Certified (CRS). There's no supervisor, purpose or page-row meter, and activity type and ATA are optional.
+- Extra boxes: **Fault / defect**, **Rectification** (what fixed it), **Parts** (P/N, S/N off and on), **Notes** and optional **Hours**.
+- The Logbook tab shows the last 2 years (days worked, months active, hours, and days per aircraft type) against Part-66 66.A.20(b)(2), then the entries by month, newest first. **Download spreadsheet (CSV)** opens in Numbers or Excel.
+- Work log entries don't count towards ATA coverage, experience time or the CAP 741 PDF.
+
+### Search
+The **Search** tab looks through both logs. Pick an aircraft type and ATA if you want, then type words: every word must appear somewhere in the entry (task, fault, fix, parts, notes, reason, result, manual ref, job card, reg, supervisor). Matches are highlighted; tap one to open it.
+
+### Current fleet first
+EC175/H175, S-92 and AW139 aircraft are listed first in the aircraft suggestions, the type filters and the Aircraft tab. Change the `PINNED` patterns near the top of the script in `index.html` to change the fleet.
+
 ### Long entries spill into the next row
 If the task detail won't fit one row (the text shrinks to 7pt at the smallest first), it carries on into the rows below. The first row keeps the activity, date, reg and job number, and the rows below get a ditto mark `"` in those columns. The supervisor's name and signature box moves to the lowest row of the entry, with the mark in the supervisor boxes above it. Switch it to a dash `–` under **Settings → Pages and printing**. An entry is never split across two pages: if it won't fit in the rows left, it starts a new page. Anything longer than a whole page is cut off, and the app warns you.
 
