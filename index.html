@@ -366,6 +366,7 @@ const ATA = [
 ];
 const ATA_NAME = Object.fromEntries(ATA);
 const actsFor = m => m==='cur' ? ACTS.map(a=>ACTS_CUR_SWAP[a[0]]||a) : ACTS;
+const actList = () => { const l=actsFor(MODE); return l.concat([...acts].filter(c=>!l.some(a=>a[0]===c)).map(c=>[c,'Other code'])); };
 const REASONS = ['Scheduled maintenance','Defect rectification','MEL rectification','Component change (life)','Modification / SB','AD compliance'];
 const ROLES = ['Certified (CRS)','Performed','Inspected','Supervised','Assisted'];
 const MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
@@ -420,8 +421,8 @@ function typeLabel(ac){
 const PINNED = [/\b(EC|H)\s?-?175/i, /\bS\s?-?92/i, /\bAW\s?-?139/i];
 const pinRank = txt => { const i = PINNED.findIndex(r => r.test(txt||'')); return i < 0 ? 99 : i; };
 const acRank = a => pinRank([typeLabel(a), a.make, a.model, a.typeOverride].join(' '));
-const sortAc = list => list.sort((a,b) => acRank(a)-acRank(b) || a.reg.localeCompare(b.reg));
-const sortTypes = list => list.sort((a,b) => pinRank(a)-pinRank(b) || a.localeCompare(b));
+const sortAc = list => list.sort((a,b) => acRank(a)-acRank(b) || cmp(a.reg,b.reg));
+const sortTypes = list => list.sort((a,b) => pinRank(a)-pinRank(b) || cmp(a,b));
 function typeOptions(types,allLabel){
   const cur=types.filter(t=>pinRank(t)<99), oth=types.filter(t=>pinRank(t)>=99);
   const o=t=>`<option>${esc(t)}</option>`;
@@ -441,8 +442,9 @@ const idb = (()=>{
 let S, DEV;               // S = synced logbook data, DEV = this-device-only data (tokens)
 let editingId = null;
 const blank = () => ({v:1,settings:{ownerName:'',updatedAt:0},aircraft:[],supervisors:[],entries:[]});
-const acById = id => S.aircraft.find(a=>a.id===id);
-const supById = id => S.supervisors.find(s=>s.id===id);
+const acById = id => S.aircraft.find(a=>a.id===id&&!a.deleted);
+const supById = id => S.supervisors.find(s=>s.id===id&&!s.deleted);
+const cmp = (a,b) => String(a??'').localeCompare(String(b??''));
 
 async function save(sync=true){
   await idb.set('state',S);
@@ -521,7 +523,7 @@ function fit(segs,w,h,F,sizes=SIZES){
 }
 function taskSegs(e){
   const segs=[];
-  if(e.task) segs.push({t:e.task.trim()+' '});
+  if(e.task) segs.push({t:String(e.task).trim()+' '});
   const add=(lab,v)=>{if(v&&String(v).trim()){segs.push({t:lab,b:true},{t:String(v).trim()+' '});}};
   add('Reason: ',e.reason);add('Ref: ',e.manual);add('Tooling: ',e.tooling);add('Challenges: ',e.challenges);add('Result: ',e.result);
   return segs;
@@ -542,10 +544,10 @@ function groupPages(entries){
     if(!groups.has(key)) groups.set(key,{ata:e.ata,type:ty,entries:[]});
     groups.get(key).entries.push(e);
   }
-  const arr=[...groups.values()].sort((a,b)=>(+a.ata- +b.ata)||a.type.localeCompare(b.type));
+  const arr=[...groups.values()].sort((a,b)=>(+a.ata- +b.ata)||cmp(a.type,b.type));
   const pages=[];
   for(const g of arr){
-    g.entries.sort((a,b)=>a.date.localeCompare(b.date)||(a.createdAt||0)-(b.createdAt||0));
+    g.entries.sort((a,b)=>cmp(a.date,b.date)||(a.createdAt||0)-(b.createdAt||0));
     const n=Math.ceil(g.entries.length/ROWS_PER_PAGE);
     for(let i=0;i<n;i++) pages.push({ata:g.ata,type:g.type,entries:g.entries.slice(i*ROWS_PER_PAGE,(i+1)*ROWS_PER_PAGE),n:i+1,of:n});
   }
@@ -581,7 +583,7 @@ async function buildPdf(entries,withSig){
   // Signature sheet(s) first
   if(withSig){
     const ids=[...new Set(entries.map(e=>e.supervisorId).filter(Boolean))];
-    const sups=ids.map(supById).filter(Boolean).sort((a,b)=>a.name.localeCompare(b.name));
+    const sups=ids.map(supById).filter(s=>s&&s.name).sort((a,b)=>cmp(a.name,b.name));
     for(let p=0;p<Math.max(1,Math.ceil(sups.length/SIGS_PER_PAGE));p++){
       const [pg]=await doc.copyPages(tpl,[T.sigPage-1]);doc.addPage(pg);
       sups.slice(p*SIGS_PER_PAGE,(p+1)*SIGS_PER_PAGE).forEach((s,i)=>{
@@ -667,7 +669,7 @@ const F_IDS=['fDate','fAc','fAta','fJob','fTask','fReason','fManual','fTooling',
 let acts=new Set();
 
 function renderActs(){
-  $('fActs').innerHTML=actsFor(MODE).map(([c,m])=>`<button type="button" class="chip${acts.has(c)?' on':''}" data-c="${c}"><b>${c}</b><small>${m}</small></button>`).join('');
+  $('fActs').innerHTML=actList().map(([c,m])=>`<button type="button" class="chip${acts.has(c)?' on':''}" data-c="${c}"><b>${c}</b><small>${m}</small></button>`).join('');
 }
 $('fActs').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;const c=b.dataset.c;acts.has(c)?acts.delete(c):acts.add(c);renderActs();saveDraft();});
 let role='';
@@ -686,7 +688,7 @@ function fillAtaSelect(){
   $('fAta').innerHTML=`<option value="">Select ATA chapter…</option>`+ATA.map(([c,n])=>`<option value="${c}">${c} – ${esc(n)}</option>`).join('');
 }
 function fillSupList(){
-  $('supList').innerHTML=live(S.supervisors).sort((a,b)=>a.name.localeCompare(b.name)).map(s=>`<option value="${esc(s.name)}">`).join('');
+  $('supList').innerHTML=live(S.supervisors).sort((a,b)=>cmp(a.name,b.name)).map(s=>`<option value="${esc(s.name)}">`).join('');
 }
 let lastAc='';
 $('fAc').addEventListener('change',()=>{
@@ -706,7 +708,7 @@ function onDateInput(){
   saveDraft();
 }
 function formEntry(){
-  return {acts:actsFor(MODE).map(a=>a[0]).filter(c=>acts.has(c)),date:parseD($('fDate').value),aircraftId:$('fAc').value,ata:$('fAta').value,
+  return {acts:actList().map(a=>a[0]).filter(c=>acts.has(c)),date:parseD($('fDate').value),aircraftId:$('fAc').value,ata:$('fAta').value,
     job:$('fJob').value.trim(),task:$('fTask').value.trim(),reason:$('fReason').value.trim(),manual:$('fManual').value.trim(),
     tooling:$('fTooling').value.trim(),challenges:$('fChal').value.trim(),result:$('fResult').value.trim(),supName:$('fSup').value.trim(),
     fault:$('fFault').value.trim(),rect:$('fRect').value.trim(),parts:$('fParts').value.trim(),notes:$('fNotes').value.trim(),role,
@@ -735,7 +737,7 @@ function onFormInput(){clearTimeout(fitT);fitT=setTimeout(updateFit,120);saveDra
 $('fAta').addEventListener('change',onFormInput);
 $('fSup').addEventListener('input',()=>{
   const n=$('fSup').value.trim().toLowerCase();
-  const s=live(S.supervisors).find(x=>x.name.toLowerCase()===n);
+  const s=live(S.supervisors).find(x=>String(x.name||"").toLowerCase()===n);
   $('supHint').textContent=!n?'Their licence number goes on the signature sheet, not on the entry.':
     s?`${s.cat||'Licence cat. not set'} · ${s.licNo||'licence no. not set'}`:'New name — will be added to your supervisor list when you save.';
 });
@@ -780,7 +782,7 @@ $('btnSave').onclick=async()=>{
   if(errs.length){toast('Please add: '+errs.join(', '),3500);return;}
   let supId='',newSup=false;
   if(MODE==='exp'&&f.supName){
-    let s=live(S.supervisors).find(x=>x.name.toLowerCase()===f.supName.toLowerCase());
+    let s=live(S.supervisors).find(x=>String(x.name||"").toLowerCase()===f.supName.toLowerCase());
     if(!s){s={id:uid(),name:f.supName,cat:'',licNo:'',mro:''};upsert(S.supervisors,s);newSup=true;toast(`${f.supName} added to supervisors — add their licence details later`,3500);}
     supId=s.id;
   }
@@ -842,8 +844,8 @@ function editAircraft(id,after){
 /* ---------- SUPERVISORS ---------- */
 const supMissing=s=>!s.licNo||!s.cat||!s.mro;
 function renderSups(){
-  const list=live(S.supervisors).sort((a,b)=>a.name.localeCompare(b.name));
-  $('supListView').innerHTML=list.length?list.map(s=>`<div class="item" data-id="${s.id}"><div class="main"><div class="t">${esc(s.name)}</div><div class="s">${esc([s.cat,s.licNo,s.mro].filter(Boolean).join(' · ')||'No licence details yet')}</div></div>${supMissing(s)?'<span class="badge">Details needed</span>':''}</div>`).join(''):`<div class="empty">No supervisors yet. Names you type on an entry are added here automatically.</div>`;
+  const list=live(S.supervisors).sort((a,b)=>cmp(a.name,b.name));
+  $('supListView').innerHTML=list.length?list.map(s=>`<div class="item" data-id="${s.id}"><div class="main"><div class="t">${esc(s.name||'(no name — tap to fix)')}</div><div class="s">${esc([s.cat,s.licNo,s.mro].filter(Boolean).join(' · ')||'No licence details yet')}</div></div>${supMissing(s)?'<span class="badge">Details needed</span>':''}</div>`).join(''):`<div class="empty">No supervisors yet. Names you type on an entry are added here automatically.</div>`;
 }
 $('supListView').addEventListener('click',e=>{const it=e.target.closest('.item');if(it)editSup(it.dataset.id);});
 $('btnAddSup').onclick=()=>editSup(null);
@@ -859,7 +861,7 @@ function editSup(id){
   ()=>{
     $('pSave').onclick=async()=>{
       const name=$('pName').value.trim();if(!name){toast('Name is required');return;}
-      if(live(S.supervisors).some(x=>x.name.toLowerCase()===name.toLowerCase()&&x.id!==id)){toast(name+' already exists');return;}
+      if(live(S.supervisors).some(x=>String(x.name||"").toLowerCase()===name.toLowerCase()&&x.id!==id)){toast(name+' already exists');return;}
       upsert(S.supervisors,{id:id||uid(),name,cat:$('pCat').value.trim(),licNo:$('pLic').value.trim().toUpperCase(),mro:$('pMro').value.trim()});
       await save();closeModal();renderSups();fillSupList();$('fSup').dispatchEvent(new Event('input'));toast('Supervisor saved');
     };
@@ -912,12 +914,12 @@ $('xType').onchange=$('xAta').onchange=$('xSig').onchange=renderBook;
 /* ---------- WORK LOG (post-licence record) ---------- */
 function isoMinusYears(n){const d=new Date();d.setFullYear(d.getFullYear()-n);return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);}
 function renderCurStats(){
-  const cut=isoMinusYears(2),rec=live(S.entries).filter(e=>e.date>=cut);
+  const cut=isoMinusYears(2),rec=live(S.entries).filter(e=>e.date&&e.date>=cut);
   const days=new Set(rec.map(e=>e.date)).size,months=new Set(rec.map(e=>e.date.slice(0,7))).size;
   const hrs=rec.reduce((n,e)=>n+(+e.hours||0),0);
   const by=new Map();
   for(const e of rec){const t=typeLabel(acById(e.aircraftId));if(!by.has(t))by.set(t,{d:new Set(),last:''});const o=by.get(t);o.d.add(e.date);if(e.date>o.last)o.last=e.date;}
-  const rows=[...by.entries()].sort((a,b)=>b[1].last.localeCompare(a[1].last));
+  const rows=[...by.entries()].sort((a,b)=>cmp(b[1].last,a[1].last));
   $('curStats').innerHTML=`<div style="font-weight:700">Last 2 years <span class="hint" style="font-weight:400">· since ${fmtD(cut)} · both logs</span></div>
     <div class="stat"><div><b>${days}</b><span>days worked</span></div><div><b>${months}</b><span>months active</span></div><div><b>${hrs?+hrs.toFixed(1):'–'}</b><span>hours logged</span></div></div>
     ${rows.length?`<table class="mini"><tr><th>Aircraft type</th><th style="text-align:right">Days</th><th style="text-align:right">Last</th></tr>${rows.map(([t,o])=>`<tr><td>${esc(t)}</td><td class="n">${o.d.size}</td><td class="n">${fmtD(o.last)}</td></tr>`).join('')}</table>`:''}
@@ -925,11 +927,11 @@ function renderCurStats(){
 }
 function renderWorkLog(all){
   renderCurStats();
-  const es=filteredEntries().sort((a,b)=>b.date.localeCompare(a.date)||(b.createdAt||0)-(a.createdAt||0));
+  const es=filteredEntries().sort((a,b)=>cmp(b.date,a.date)||(b.createdAt||0)-(a.createdAt||0));
   $('cSummary').textContent=es.length?`${es.length} ${es.length===1?'entry':'entries'}, newest first.`:'';
   $('btnCsv').disabled=!es.length;
   const groups=new Map();
-  for(const e of es){const k=e.date.slice(0,7);if(!groups.has(k))groups.set(k,[]);groups.get(k).push(e);}
+  for(const e of es){const k=(e.date||'0000-00').slice(0,7);if(!groups.has(k))groups.set(k,[]);groups.get(k).push(e);}
   $('bookList').innerHTML=es.length?[...groups.entries()].map(([k,list])=>`
     <div class="page"><div class="ph"><span class="ata">${MONTHS[+k.slice(5)-1]} ${k.slice(0,4)}</span><span class="ty"></span><span class="pn">${list.length} ${list.length===1?'entry':'entries'}</span></div>
     ${list.map(e=>{const ac=acById(e.aircraftId);return `
@@ -939,7 +941,7 @@ function renderWorkLog(all){
 }
 function toCsv(rows){return rows.map(r=>r.map(v=>{v=String(v??'');return /[",\r\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}).join(',')).join('\r\n');}
 $('btnCsv').onclick=async()=>{
-  const es=filteredEntries().sort((a,b)=>a.date.localeCompare(b.date));
+  const es=filteredEntries().sort((a,b)=>cmp(a.date,b.date));
   const rows=[['Date','Reg','Aircraft type','ATA','Job card','Activity','Role','Hours','Task','Fault / defect','Rectification','Parts','Manual ref','Tooling','Notes']];
   for(const e of es){const ac=acById(e.aircraftId);rows.push([fmtD(e.date),ac?.reg,typeLabel(ac),e.ata?ataLabel(e.ata):'',e.job,(e.acts||[]).join(' '),e.role,e.hours,e.task,e.fault,e.rect,e.parts,e.manual,e.tooling,e.notes]);}
   const bytes=new TextEncoder().encode('\ufeff'+toCsv(rows));
@@ -973,7 +975,7 @@ function renderSearch(){
   const terms=$('qText').value.trim().toLowerCase().split(/\s+/).filter(Boolean);
   let es=all.filter(e=>(qLog==='all'||logOf(e)===qLog)&&(!ty||typeLabel(acById(e.aircraftId))===ty)&&(!at||e.ata===at));
   if(terms.length) es=es.filter(e=>{const h=haystack(e);return terms.every(t=>h.includes(t));});
-  es.sort((a,b)=>b.date.localeCompare(a.date)||(b.createdAt||0)-(a.createdAt||0));
+  es.sort((a,b)=>cmp(b.date,a.date)||(b.createdAt||0)-(a.createdAt||0));
   const LIMIT=100;
   $('qCount').textContent=!all.length?'':`${es.length} ${es.length===1?'match':'matches'}${es.length>LIMIT?` — showing newest ${LIMIT}`:''}`;
   $('qResults').innerHTML=es.slice(0,LIMIT).map(e=>{

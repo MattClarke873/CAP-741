@@ -1,6 +1,6 @@
 // Offline cache for the CAP 741 Log app.
 // Bump VERSION whenever you upload changed files so phones pick up the new copy.
-const VERSION = 'cap741-v6';
+const VERSION = 'cap741-v7';
 const FILES = [
   './',
   './index.html',
