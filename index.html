@@ -440,6 +440,17 @@ nav button{font-size:12px}
     <div class="hint" id="xSummary"></div>
     </div>
     <div class="only-cur">
+    <label for="wFrom">From</label>
+    <div class="row">
+      <input id="wFrom" class="mono" placeholder="Blank: from your first job" autocomplete="off" autocapitalize="characters">
+      <div class="datewrap"><button class="btn sec" type="button" tabindex="-1" aria-label="Pick the from date"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></button><input type="date" id="wFromPick" aria-label="Pick the from date"></div>
+    </div>
+    <label for="wTo">To</label>
+    <div class="row">
+      <input id="wTo" class="mono" placeholder="Blank: up to your latest job" autocomplete="off" autocapitalize="characters">
+      <div class="datewrap"><button class="btn sec" type="button" tabindex="-1" aria-label="Pick the to date"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></button><input type="date" id="wToPick" aria-label="Pick the to date"></div>
+    </div>
+    <div class="hint" id="wRangeHint">Leave a box blank to include everything at that end. Both downloads use these dates.</div>
     <div class="btns"><button class="btn" id="btnWorkPdf" type="button">Download PDF</button><button class="btn sec" id="btnCsv" type="button">Download CSV</button></div>
     <div class="hint" id="cSummary"></div>
     </div>
@@ -1672,8 +1683,7 @@ function renderCurStats(){
 function renderWorkLog(all){
   renderCurStats();
   const es=filteredEntries().sort((a,b)=>cmp(b.date,a.date)||(b.createdAt||0)-(a.createdAt||0));
-  $('cSummary').textContent=es.length?`${es.length} ${es.length===1?'entry':'entries'}, newest first.`:'';
-  $('btnCsv').disabled=$('btnWorkPdf').disabled=!es.length;
+  updateRange(es);
   const groups=new Map();
   for(const e of es){const k=(e.date||'0000-00').slice(0,7);if(!groups.has(k))groups.set(k,[]);groups.get(k).push(e);}
   $('bookList').innerHTML=es.length?[...groups.entries()].map(([k,list])=>`
@@ -1685,12 +1695,35 @@ function renderWorkLog(all){
 }
 $('bookList').addEventListener('click',e=>{const r=e.target.closest('.wr[data-id]');if(r)editEntry(r.dataset.id);});
 function toCsv(rows){return rows.map(r=>r.map(v=>{v=String(v??'');return /[",\r\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}).join(',')).join('\r\n');}
+/* From / To dates for the downloads. A blank box means no limit at that end. */
+function workRange(){
+  const f=$('wFrom').value.trim(),t=$('wTo').value.trim(),from=f?parseD(f):'',to=t?parseD(t):'';
+  const err=(f&&!from)?'The From date isn\'t a valid date. Try 01JAN24 or 01/01/2024.':(t&&!to)?'The To date isn\'t a valid date. Try 31DEC24 or 31/12/2024.':(from&&to&&from>to)?'The From date is after the To date.':'';
+  return {from,to,err};
+}
+const rangedWork=()=>{const r=workRange();return filteredEntries().filter(e=>e.date&&(!r.from||e.date>=r.from)&&(!r.to||e.date<=r.to));};
+function updateRange(all=filteredEntries()){
+  const r=workRange(),h=$('wRangeHint');
+  if(r.err){h.innerHTML=`<span style="color:var(--danger)">${r.err}</span>`;$('btnCsv').disabled=$('btnWorkPdf').disabled=true;$('cSummary').textContent='';return;}
+  h.textContent='Leave a box blank to include everything at that end. Both downloads use these dates.';
+  const n=rangedWork().length;
+  $('cSummary').textContent=!all.length?'':(r.from||r.to)?`${n} of ${all.length} ${all.length===1?'entry':'entries'} fall in these dates. The list below shows them all, newest first.`:`${all.length} ${all.length===1?'entry':'entries'}, newest first.`;
+  $('btnCsv').disabled=$('btnWorkPdf').disabled=!n;
+}
+for(const k of ['From','To']){
+  const box=$('w'+k),pick=$('w'+k+'Pick');
+  pick.addEventListener('change',()=>{if(pick.value){box.value=fmtD(pick.value);updateRange();}});
+  box.addEventListener('input',()=>updateRange());
+  box.addEventListener('blur',()=>{const iso=parseD(box.value);if(iso){box.value=fmtD(iso);pick.value=iso;}updateRange();});
+}
+const rangeName=()=>{const r=workRange();return r.from||r.to?`${r.from?fmtD(r.from):'start'}-to-${r.to?fmtD(r.to):'latest'}`:fmtD(todayISO());};
 $('btnCsv').onclick=async()=>{
-  const es=filteredEntries().sort((a,b)=>cmp(a.date,b.date));
+  if(workRange().err){toast(workRange().err,3500);return;}
+  const es=rangedWork().sort((a,b)=>cmp(a.date,b.date));
   const rows=[['Date','Reg','Aircraft type','ATA','Job card','Activity','Role','Hours','Task','Fault / defect','Rectification','Parts','Manual ref','Tooling','Notes']];
   for(const e of es){const ac=acById(e.aircraftId);rows.push([fmtD(e.date),ac?.reg,typeLabel(ac),e.ata?ataLabel(e.ata):'',e.job,(e.acts||[]).join(' '),e.role||'Certified (CRS)',e.hours,e.task,e.fault,e.rect,e.parts,e.manual,e.tooling,e.notes]);}
   // download straight to the phone (Files > Downloads on iPhone) rather than opening the share sheet
-  await deliver(new TextEncoder().encode('\ufeff'+toCsv(rows)),`work-log-${fmtD(todayISO())}.csv`,'text/csv',{share:false});
+  await deliver(new TextEncoder().encode('\ufeff'+toCsv(rows)),`work-log-${rangeName()}.csv`,'text/csv',{share:false});
   toast('CSV downloaded');
 };
 
@@ -1703,7 +1736,7 @@ function recencyStats(){
   return {cut,days:new Set(rec.map(e=>e.date)).size,months:new Set(rec.map(e=>e.date.slice(0,7))).size,hrs:rec.reduce((n,e)=>n+(+e.hours||0),0),
     types:[...by.entries()].sort((a,b)=>pinRank(a[0])-pinRank(b[0])||cmp(b[1].last,a[1].last)).map(([t,o])=>({t,days:o.d.size,last:o.last}))};
 }
-async function buildWorkPdf(entries){
+async function buildWorkPdf(entries,range={}){
   const {PDFDocument,StandardFonts,rgb}=PDFLib;
   const doc=await PDFDocument.create();
   const F={r:await doc.embedFont(StandardFonts.Helvetica),b:await doc.embedFont(StandardFonts.HelveticaBold)};
@@ -1720,7 +1753,9 @@ async function buildWorkPdf(entries){
     const add=(l,v)=>{if(v&&String(v).trim())segs.push({t:l,b:true},{t:String(v).trim()+' '});};
     add('Reason: ',e.reason);add('Fault: ',e.fault);add('Fix: ',e.rect);add('Parts: ',e.parts);add('Ref: ',e.manual);add('Tooling: ',e.tooling);add('Notes: ',e.notes);return segs;};
   const dates=entries.map(e=>e.date).filter(Boolean).sort();
-  const period=dates.length?`${fmtD(dates[0])} to ${fmtD(dates[dates.length-1])}`:'';
+  // the period printed is the dates asked for; a blank end falls back to the first or latest job
+  const pFrom=range.from||dates[0],pTo=range.to||dates[dates.length-1];
+  const period=pFrom&&pTo?`${fmtD(pFrom)} to ${fmtD(pTo)}`:'';
   const ty=$('xType').value,at=$('xAta').value;
   const scope=[ty&&('Aircraft type: '+ty),at&&('ATA '+ataLabel(at))].filter(Boolean).join('   ');
   const pages=[];let pg,y;
@@ -1781,12 +1816,13 @@ async function buildWorkPdf(entries){
   return doc.save();
 }
 $('btnWorkPdf').onclick=async()=>{
+  const r=workRange();if(r.err){toast(r.err,3500);return;}
   const b=$('btnWorkPdf'),label=b.textContent;b.disabled=true;b.textContent='Building PDF…';
   try{
-    const es=filteredEntries().sort((a,b)=>cmp(a.date,b.date)||(a.createdAt||0)-(b.createdAt||0));
-    const bytes=await buildWorkPdf(es);
+    const es=rangedWork().sort((a,b)=>cmp(a.date,b.date)||(a.createdAt||0)-(b.createdAt||0));
+    const bytes=await buildWorkPdf(es,r);
     const who=(S.settings.ownerName||'logbook').replace(/[^A-Za-z0-9]+/g,'-');
-    await deliver(bytes,`Work-log-${who}-${fmtD(todayISO())}.pdf`,'application/pdf',{share:false});
+    await deliver(bytes,`Work-log-${who}-${rangeName()}.pdf`,'application/pdf',{share:false});
     toast('PDF downloaded');
   }catch(err){console.error(err);alert('PDF download failed: '+err.message);}
   b.disabled=false;b.textContent=label;
