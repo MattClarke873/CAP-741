@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>CAP 741 Log</title>
 <meta name="description" content="CAP 741 Section 3.1 maintenance experience logbook">
-<meta name="theme-color" content="#1c2422">
+<meta name="theme-color" content="#12203a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,268 +14,138 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" href="icon-180.png">
 <style>
-/* Palette: bare Alclad aluminium, graphite, zinc-chromate primer, remove-before-flight red.
-   Type: Avenir Next Condensed (built into iOS/macOS, works offline) for placard-style headings and controls. */
 :root{
-  --bg:#e2e6e3; --card:#f6f7f5; --field:#ffffff; --ink:#1c2422; --muted:#5d6965; --line:#c5ccc8;
-  --accent:#93aa42; --accent-ink:#3d5014; --accent-soft:#e1e9c4; --on-accent:#161e07;
-  --bar:#1c2422; --bar-ink:#eef1ee; --bar-muted:#93a19c;
-  --danger:#c0182b; --ok:#3d7426; --warn:#8f5400; --warn-soft:#f3e4c8;
-  --paper:#fcfcf8; --rule:#b8c1bc; --pen:#17215c; --pencil:#7b8580;
-  --head:"Avenir Next Condensed","Arial Narrow","Roboto Condensed",sans-serif-condensed,sans-serif;
-  --body:"Avenir Next",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  --bg:#f3f1eb; --card:#ffffff; --ink:#12203a; --muted:#677087; --line:#ddd8cc; --field:#fbfaf7;
+  --accent:#d68c12; --accent-soft:#f6e6c8; --bar:#12203a; --bar-ink:#f3f1eb;
+  --danger:#b3261e; --ok:#2e7d32; --warn:#a15c00;
   --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --r:12px;
 }
 @media (prefers-color-scheme:dark){
   :root{
-    --bg:#121716; --card:#1b2220; --field:#141a19; --ink:#e3e8e4; --muted:#93a09b; --line:#2e3835;
-    --accent:#a7c056; --accent-ink:#c6dc7f; --accent-soft:#2a3317; --on-accent:#141b05;
-    --bar:#0b0f0e; --bar-ink:#e3e8e4; --bar-muted:#7f8c87;
-    --danger:#ff6f6f; --ok:#9bd07a; --warn:#f0b35a; --warn-soft:#33270f;
+    --bg:#0c1424; --card:#152038; --ink:#e7ebf3; --muted:#97a3bc; --line:#26344f; --field:#101a2e;
+    --accent:#f0a928; --accent-soft:#3a2e14; --bar:#081022; --bar-ink:#e7ebf3;
+    --danger:#ff8a80; --ok:#81c784; --warn:#ffb74d;
   }
 }
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 var(--body);-webkit-text-size-adjust:100%}
-body{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
-a{color:var(--accent-ink)}
-
-/* header: graphite bar with a primer stripe, like a painted spar cap */
-header{position:sticky;top:0;z-index:5;background:var(--bar);color:var(--bar-ink);padding:calc(10px + env(safe-area-inset-top)) 16px 10px;display:flex;align-items:center;gap:12px;border-bottom:3px solid var(--accent)}
-header .brand{flex:1;min-width:0;line-height:1.05}
-header h1{font:800 24px/1 var(--head);margin:0;letter-spacing:.01em}
-header p{margin:2px 0 0;font:500 13px/1.2 var(--head);color:var(--bar-muted)}
-.helplink{background:none;border:0;padding:6px 2px;color:var(--bar-muted);font:600 14px/1 var(--head);letter-spacing:.02em;cursor:pointer;text-decoration:underline;text-decoration-color:rgba(255,255,255,.25);text-underline-offset:3px}
-.helplink:hover,.helplink:focus-visible{color:var(--bar-ink)}
-.pill{font:600 13px/1 var(--head);padding:7px 11px;border-radius:99px;background:rgba(255,255,255,.09);white-space:nowrap;border:1px solid rgba(255,255,255,.14);color:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
-.pill::before{content:"";width:8px;height:8px;border-radius:50%;background:#8b9893}
-.pill.ok::before{background:#9bd07a}.pill.warn::before{background:#f0b35a}
-
-main{max-width:680px;margin:0 auto;padding:18px 16px}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
+body{padding-bottom:calc(70px + env(safe-area-inset-bottom))}
+header{position:sticky;top:0;z-index:5;background:var(--bar);color:var(--bar-ink);padding:calc(10px + env(safe-area-inset-top)) 16px 10px;display:flex;align-items:center;gap:10px}
+header h1{font-size:17px;margin:0;font-weight:700;letter-spacing:.3px;flex:1}
+header h1 span{color:var(--accent);font-family:var(--mono)}
+.pill{font-size:12px;padding:4px 10px;border-radius:99px;background:rgba(255,255,255,.12);white-space:nowrap;border:0;color:inherit}
+.pill.ok::before{content:"● ";color:#7bd88f}.pill.warn::before{content:"● ";color:#ffb74d}.pill.off::before{content:"● ";color:#9aa6bf}
+main{max-width:720px;margin:0 auto;padding:14px 16px}
 .view{display:none}.view.on{display:block}
-h2{font:700 30px/1.1 var(--head);margin:4px 0 14px;letter-spacing:-.005em}
-h3{font:700 19px/1.2 var(--head);margin:26px 0 8px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px}
-
-label{display:block;font-size:14px;font-weight:600;color:var(--ink);margin:18px 0 6px}
-label .opt{font-weight:400;color:var(--muted)}
-input,select,textarea,.btn{scroll-margin:96px}
-input,select,textarea{width:100%;font:inherit;font-size:16px;color:var(--ink);background:var(--field);border:1.5px solid var(--line);border-radius:8px;padding:11px 12px;-webkit-appearance:none;appearance:none}
-select{background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 18px) 50%,calc(100% - 12px) 50%;background-size:6px 6px;background-repeat:no-repeat;padding-right:34px}
+h2{font-size:20px;margin:6px 0 12px}
+h3{font-size:15px;margin:18px 0 8px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:12px}
+label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin:14px 0 6px;text-transform:uppercase;letter-spacing:.5px}
+label .opt{font-weight:400;text-transform:none;letter-spacing:0}
+input,select,textarea,.btn{scroll-margin:90px}
+input,select,textarea{width:100%;font:inherit;font-size:16px;color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:10px;padding:11px 12px;-webkit-appearance:none;appearance:none}
+select{background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 18px) 50%,calc(100% - 12px) 50%;background-size:6px 6px;background-repeat:no-repeat;padding-right:32px}
 textarea{min-height:64px;resize:vertical}
-input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
-button:focus-visible,summary:focus-visible,a:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:-1px}
 .mono{font-family:var(--mono)}
 .row{display:flex;gap:8px;align-items:stretch}
-.row>*{flex:1;min-width:0}
-
-/* activity chips read like inspection tags */
+.row>*{flex:1}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
-.chip{border:1.5px solid var(--line);background:var(--field);color:var(--ink);border-radius:8px;padding:8px 10px;font:inherit;font-size:14px;text-align:left;cursor:pointer;min-width:0;position:relative}
-.chip b{font:800 19px/1.05 var(--head);display:block;letter-spacing:.02em}
-.chip small{color:var(--muted);font-size:11.5px;line-height:1.2;display:block;margin-top:2px}
-.chip.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
-.chip.on small{color:var(--on-accent);opacity:.8}
-.chip.on::after{content:"";position:absolute;top:8px;right:8px;width:7px;height:12px;border:solid var(--on-accent);border-width:0 2.5px 2.5px 0;transform:rotate(45deg)}
-.acts{display:grid;grid-template-columns:repeat(3,1fr)}
-.mini{font-size:13px;padding:6px 10px;border-radius:99px}
-.chip.mini.on::after{display:none}
-#covLic .chip{font:700 16px/1 var(--head);padding:8px 11px}
-
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1.5px solid var(--accent);border-radius:8px;padding:12px 16px;font:700 18px/1.1 var(--head);letter-spacing:.01em;background:var(--accent);color:var(--on-accent);cursor:pointer;text-decoration:none}
-.btn.sec{background:transparent;color:var(--ink);border-color:var(--line)}
-.btn.danger{background:transparent;color:var(--danger);border-color:var(--danger)}
-.btn.small{font-size:15px;padding:8px 12px}
+.chip{border:1px solid var(--line);background:var(--field);color:var(--ink);border-radius:10px;padding:8px 10px;font:inherit;font-size:14px;text-align:left;cursor:pointer;min-width:0}
+.chip b{font-family:var(--mono);display:block;font-size:15px}
+.chip small{color:var(--muted);font-size:11px}
+.chip.on{background:var(--accent-soft);border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.acts .chip{flex:1 1 calc(33.3% - 8px)}
+.mini{font-size:13px;padding:6px 10px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;border-radius:10px;padding:13px 16px;font:inherit;font-weight:600;background:var(--accent);color:#1a1205;cursor:pointer;text-decoration:none}
+.btn.sec{background:var(--field);color:var(--ink);border:1px solid var(--line)}
+.btn.danger{background:transparent;color:var(--danger);border:1px solid var(--danger)}
 .btn.block{width:100%}
-.btn:disabled{opacity:.45}
-.btn:active{transform:translateY(1px)}
-.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+.btn:disabled{opacity:.5}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
 .btns .btn{flex:1}
-.link{background:none;border:0;padding:0;font:inherit;font-size:14px;color:var(--muted);text-decoration:underline;cursor:pointer;margin-top:14px}
 .datewrap{position:relative;flex:0 0 52px}
 .datewrap .btn{width:100%;height:100%;padding:0}
 .datewrap input{position:absolute;inset:0;opacity:0;width:100%;height:100%;padding:0}
-.hint{font-size:13.5px;color:var(--muted);margin-top:6px}
-
-fieldset{border:1.5px solid var(--line);border-radius:12px;padding:2px 14px 14px;margin:22px 0 0;background:var(--card)}
-legend{font:700 19px/1 var(--head);padding:0 6px;margin-left:-6px}
-
-/* row meter: the five rows of the CAP 741 page, and where this entry lands */
-.fit{margin-top:16px;padding:12px;border-radius:8px;background:var(--field);border:1.5px solid var(--line);font-size:14px}
-.fit.bad{border-color:var(--danger)}
-.fit .msg{display:flex;gap:8px;align-items:baseline}
-.fit .msg b{font:700 17px/1.2 var(--head)}
-.fit.ok .msg b{color:var(--ok)}.fit.spill .msg b{color:var(--accent-ink)}.fit.bad .msg b{color:var(--danger)}
-.meter{display:grid;grid-template-columns:repeat(5,1fr);gap:3px;margin:10px 0 6px}
-.meter i{height:12px;border-radius:2px;border:1.5px solid var(--line);background:transparent}
-.meter i.used{background:repeating-linear-gradient(135deg,var(--line) 0 3px,transparent 3px 6px)}
-.meter i.this{background:var(--accent);border-color:var(--accent)}
-.fit.bad .meter i.this{background:var(--danger);border-color:var(--danger)}
-.fit .sub{color:var(--muted);font-size:13px}
-
+.hint{font-size:13px;color:var(--muted);margin-top:6px}
+.fit{font-size:13px;margin-top:10px;padding:8px 10px;border-radius:8px;background:var(--field);border:1px solid var(--line)}
+.fit.ok{color:var(--ok)}.fit.bad{color:var(--danger);border-color:var(--danger)}
+.fitbar{height:5px;border-radius:3px;background:var(--line);margin-top:6px;overflow:hidden}
+.fitbar i{display:block;height:100%;background:var(--ok)}
+.fit.bad .fitbar i{background:var(--danger)}
+fieldset{border:1px solid var(--line);border-radius:var(--r);padding:4px 12px 12px;margin:16px 0 0}
+legend{font-size:13px;font-weight:700;color:var(--ink);text-transform:uppercase;letter-spacing:.5px;padding:0 6px}
 .list{display:flex;flex-direction:column;gap:8px}
-.acgrp{margin-bottom:10px}
-.acgrp>summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;gap:2px 10px;align-items:center;padding:10px 12px;border-radius:10px;background:var(--bar);color:var(--bar-ink)}
-.acgrp>summary::-webkit-details-marker{display:none}
-.acgrp>summary::before{content:"";grid-row:1/3;width:8px;height:8px;border:solid var(--accent);border-width:0 2.5px 2.5px 0;transform:rotate(-45deg);transition:transform .15s}
-.acgrp[open]>summary::before{transform:rotate(45deg)}
-.acgrp>summary .ty{font:700 17px/1.2 var(--head)}
-.acgrp>summary .cnt{font-size:12.5px;color:var(--bar-muted)}
-.acgrp>.list{padding:8px 0 0 10px;border-left:3px solid var(--accent);margin-left:12px;margin-top:6px}
-.item{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;gap:10px;align-items:center;cursor:pointer}
+.item{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:flex;gap:10px;align-items:center;cursor:pointer}
 .item .main{flex:1;min-width:0}
 .item .t{font-weight:600}
-.item .t.mono{font-weight:700}
 .item .s{font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.badge{font:700 13px/1 var(--head);padding:5px 8px;border-radius:4px;background:var(--warn-soft);color:var(--warn);white-space:nowrap}
+.badge{font-size:11px;padding:2px 8px;border-radius:99px;background:var(--accent-soft);color:var(--warn);font-weight:600;white-space:nowrap}
+.page{background:var(--card);border:1px solid var(--line);border-radius:var(--r);margin-bottom:12px;overflow:hidden}
+.page .ph{display:flex;gap:8px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--line);background:var(--field)}
+.page .ph .ata{font-family:var(--mono);font-weight:700;background:var(--bar);color:var(--bar-ink);border-radius:6px;padding:2px 7px;font-size:13px}
+.page .ph .ty{flex:1;font-weight:600;font-size:14px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.page .ph .pn{font-size:12px;color:var(--muted)}
+.erow{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;padding:10px 12px;border-bottom:1px solid var(--line);cursor:pointer}
+.erow:last-child{border-bottom:0}
+.erow .d{font-family:var(--mono);font-size:13px;font-weight:700}
+.erow .a{font-family:var(--mono);font-size:12px;color:var(--accent)}
+.erow .x{grid-column:1/-1;font-size:14px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.erow .m{grid-column:1/-1;font-size:12px;color:var(--muted)}
 .empty{color:var(--muted);text-align:center;padding:30px 10px}
-.warnbox.acw b{display:block;margin-bottom:2px}
-.link.inl{margin:0;font-size:inherit;color:var(--accent-ink);font-weight:600}
-.filterbar{background:var(--accent-soft);border:1.5px solid var(--accent);border-radius:8px;padding:9px 12px;font-size:14px;margin:10px 0;font-weight:600}
-.warnbox{border-left:4px solid var(--danger);background:var(--card);border-radius:4px;padding:9px 12px;font-size:14px;margin:10px 0}
-.check{display:flex;gap:10px;align-items:center;font-size:15px;margin-top:14px;color:var(--ink);font-weight:500}
-.check input{width:22px;height:22px;-webkit-appearance:auto;appearance:auto;accent-color:var(--accent);flex:0 0 auto;margin:0}
-.seg{display:inline-flex;border:1.5px solid var(--line);border-radius:8px;overflow:hidden}
-.seg button{border:0;background:transparent;color:var(--ink);font:600 15px/1 var(--body);padding:10px 14px;cursor:pointer}
-.seg button+button{border-left:1.5px solid var(--line)}
-.seg button.on{background:var(--accent);color:var(--on-accent)}
-.seg.purp{display:flex}.seg.purp button{flex:1;font:700 17px/1 var(--head);padding:12px 10px}
-.slot .pt{display:inline-block;margin-top:4px;font:700 10.5px/1 var(--body);padding:3px 5px;border-radius:3px;border:1px solid #9aa5a0;color:#4b5551}
-.slot .pt.certification{background:#1f2624;color:var(--paper);border-color:#1f2624}
-
-/* logbook sheets: paper stays paper in dark mode, entries in pen ink */
-.sheet{background:var(--paper);color:#1f2624;border:1px solid var(--rule);border-radius:3px;margin:0 0 16px;box-shadow:0 1px 0 var(--rule),0 2px 0 -1px var(--paper),0 3px 0 -1px var(--rule)}
-.sheet .sh{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:10px 12px 9px;border-bottom:1.5px solid #1f2624}
-.sheet .sh .ty{font:700 18px/1.15 var(--head);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.sheet .sh .at{font-size:13px;color:#4b5551;grid-column:1}
-.sheet .sh .at b{font-family:var(--mono)}
-.sheet .sh .pn{grid-column:2;grid-row:1/3;align-self:center;font:600 14px/1 var(--head);color:#4b5551;text-align:right}
-.sheet .sh .full{display:inline-block;margin-top:4px;background:#1f2624;color:var(--paper);padding:3px 6px;border-radius:3px;font-size:12px}
-.slot{display:grid;grid-template-columns:5.6em 1fr;border-bottom:1px solid var(--rule);min-height:58px;cursor:pointer}
-.slot.cont{border-top:1px dashed var(--rule);margin-top:-1px}
-.slot>div{padding:7px 10px}
-.slot .l{border-right:1px solid var(--rule);font-family:var(--mono);font-size:12px;color:var(--pen)}
-.slot .l b{display:block;font-size:13px}
-.slot .l .ac{color:#4b5551;font-family:var(--body);font-size:11.5px}
-.slot.cont .l{display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--pen)}
-.slot .x{color:var(--pen);font-size:13.5px;line-height:1.35;overflow:hidden;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical}
-.slot .m{font-size:12px;color:#4b5551;margin-top:3px}
-.slot .m.warn{color:var(--danger)}
-.slot.blank{cursor:default}
-.slot.blank .x,.slot.blank .l{color:#aab3ae}
-.sheet .sf{display:flex;align-items:center;gap:10px;padding:9px 12px;font-size:13px;color:#4b5551}
-.sheet .sf span{flex:1}
-.sheet .sf .btn.sec{color:#1f2624;border-color:#9aa5a0;font-size:15px;padding:7px 12px}
-
-/* bottom nav */
-nav{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--bar);display:flex;padding-bottom:env(safe-area-inset-bottom)}
-nav button{flex:1;border:0;background:none;color:var(--bar-muted);font:600 13px/1 var(--head);letter-spacing:.02em;padding:9px 2px 10px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;border-top:3px solid transparent}
+.warnbox{border-left:4px solid var(--warn);background:var(--accent-soft);border-radius:8px;padding:10px 12px;font-size:14px;margin:10px 0}
+.check{display:flex;gap:10px;align-items:center;font-size:15px;margin-top:12px;text-transform:none;letter-spacing:0;color:var(--ink);font-weight:500}
+.check input{width:22px;height:22px;-webkit-appearance:auto;appearance:auto;flex:0 0 auto}
+nav{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--card);border-top:1px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;border:0;background:none;color:var(--muted);font:inherit;font-size:11px;padding:8px 2px 9px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer}
 nav button svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-nav button.on{color:var(--bar-ink);border-top-color:var(--accent)}
+nav button.on{color:var(--ink);font-weight:700}
 nav button.on svg{stroke:var(--accent)}
-
-dialog{border:0;border-radius:14px;padding:0;width:min(560px,94vw);max-height:90vh;background:var(--card);color:var(--ink)}
-dialog::backdrop{background:rgba(8,12,11,.6)}
-dialog .dh{padding:14px 16px;border-bottom:1px solid var(--line);font:700 21px/1.1 var(--head);display:flex;align-items:center}
+dialog{border:0;border-radius:16px;padding:0;width:min(560px,94vw);max-height:90vh;background:var(--card);color:var(--ink)}
+dialog::backdrop{background:rgba(5,10,20,.55)}
+dialog .dh{padding:14px 16px;border-bottom:1px solid var(--line);font-weight:700;display:flex;align-items:center}
 dialog .dh span{flex:1}
-dialog .db{padding:4px 16px 18px;overflow:auto;max-height:calc(90vh - 56px)}
-dialog p{margin:14px 0 0}
-.x-btn{border:0;background:none;font-size:26px;line-height:1;color:var(--muted);cursor:pointer;padding:0 4px}
-#toast{position:fixed;left:50%;bottom:calc(88px + env(safe-area-inset-bottom));transform:translate(-50%,8px);background:var(--bar);color:var(--bar-ink);padding:11px 16px;border-radius:8px;border-left:4px solid var(--accent);font-size:14px;max-width:90vw;z-index:20;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s}
-#toast.on{opacity:1;transform:translate(-50%,0)}
-.kv{display:grid;grid-template-columns:auto 1fr;gap:5px 14px;font-size:14px}
+dialog .db{padding:4px 16px 16px;overflow:auto;max-height:calc(90vh - 56px)}
+.x-btn{border:0;background:none;font-size:22px;color:var(--muted);cursor:pointer;padding:0 4px}
+#toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--bar);color:var(--bar-ink);padding:10px 16px;border-radius:10px;font-size:14px;max-width:90vw;z-index:20;opacity:0;pointer-events:none;transition:opacity .2s}
+#toast.on{opacity:1}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:14px}
 .kv dt{color:var(--muted)}.kv dd{margin:0}
-code{font-family:var(--mono);font-size:13px;background:var(--field);padding:1px 5px;border-radius:4px;border:1px solid var(--line)}
-
-/* Dropbox set-up guide */
-.guide{border:1.5px solid var(--line);border-radius:10px;background:var(--field);margin-top:14px}
-.guide summary{cursor:pointer;padding:12px 14px;font:700 17px/1.2 var(--head);list-style:none;display:flex;align-items:center;gap:8px}
-.guide summary::-webkit-details-marker{display:none}
-.guide summary::before{content:"?";flex:0 0 22px;height:22px;border-radius:50%;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font-size:15px}
-.guide summary::after{content:"Show";margin-left:auto;font:500 13px var(--body);color:var(--muted)}
-.guide[open] summary::after{content:"Hide"}
-ol.steps{list-style:none;counter-reset:s;margin:0;padding:0 14px 6px}
-ol.steps>li{counter-increment:s;position:relative;padding:0 0 16px 40px;font-size:14.5px}
-ol.steps>li::before{content:counter(s);position:absolute;left:0;top:-1px;width:27px;height:27px;border-radius:50%;border:1.5px solid var(--accent);display:grid;place-items:center;font:700 15px/1 var(--head);color:var(--accent-ink);background:var(--card)}
-ol.steps>li::after{content:"";position:absolute;left:13px;top:28px;bottom:2px;width:1.5px;background:var(--line)}
-ol.steps>li:last-child::after{display:none}
-ol.steps>li.done::before{content:"✓";background:var(--accent);color:var(--on-accent)}
-ol.steps>li.now::before{background:var(--accent-soft)}
-ol.steps b{display:block;font:700 16.5px/1.25 var(--head);margin-bottom:2px}
-.copy{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
-.copy button{font:500 13px var(--mono);border:1.5px dashed var(--accent);background:transparent;color:var(--ink);border-radius:6px;padding:6px 9px;cursor:pointer}
-.copy button.done{border-style:solid;background:var(--accent-soft)}
-
-/* ATA coverage: one tile per chapter, the bar fills toward the low end of the target */
-.cov{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:12px}
-.cov>summary{list-style:none;cursor:pointer;padding:14px 16px;display:grid;grid-template-columns:1fr auto;align-items:baseline;gap:4px 10px}
-.cov>summary::-webkit-details-marker{display:none}
-.cov>summary b{font:700 21px/1.1 var(--head)}
-.cov>summary span{grid-row:2;grid-column:1/-1;color:var(--muted);font-size:14px}
-.cov>summary::after{content:"Hide";font-size:13px;color:var(--muted)}
-.cov:not([open])>summary::after{content:"Show"}
-.cov .body{padding:0 16px 16px}
-.cov h4{font:700 16px/1.2 var(--head);margin:16px 0 8px;display:flex;gap:8px;align-items:baseline}
-.cov h4 small{font:400 13px var(--body);color:var(--muted)}
-.cvgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:6px}
-.cv{position:relative;text-align:left;border:1.5px solid var(--line);background:var(--field);border-radius:6px;padding:7px 8px 10px;font:inherit;color:var(--ink);cursor:pointer;overflow:hidden;min-height:80px;display:flex;flex-direction:column}
-.cv .c{font:800 21px/1 var(--head)}
-.cv .ct{position:absolute;top:8px;right:7px;font:700 18px/1 var(--head)}
-.cv .ct small{font-size:12px;color:var(--muted);font-weight:600}
-.cv .nm{font-size:11.5px;line-height:1.2;color:var(--muted);margin-top:4px;flex:1}
-.cv .ac{font:600 10.5px/1.2 var(--mono);color:var(--accent-ink);margin-top:4px}
-.cv i{position:absolute;left:0;bottom:0;height:4px;width:var(--p);background:var(--accent)}
-.cv.none{border-style:dashed;border-color:var(--danger)}
-.cv.none .c,.cv.none .ct{color:var(--danger)}
-.cv.low i{background:var(--warn)}
-.cv.full{background:var(--accent-soft);border-color:var(--accent)}
-.cv .for{font-size:10.5px;color:var(--accent-ink);margin-top:3px;line-height:1.2}
-.ready{display:grid;gap:8px;margin:14px 0 4px}
-.rd{display:grid;grid-template-columns:3.2em 1fr 3em;align-items:center;gap:10px}
-.rd b{font:800 18px/1 var(--head)}
-.rd span{font:700 17px/1 var(--head);text-align:right}
-.rbar{height:10px;border-radius:5px;background:var(--line);overflow:hidden}
-.rbar i{display:block;height:100%;background:var(--accent);border-radius:5px}
-.cv .flag{font:600 10.5px/1.2 var(--body);color:var(--warn);margin-top:3px}
-.certnote{margin-top:18px;padding:10px 12px;border-radius:8px;border:1.5px solid var(--accent);background:var(--accent-soft);font-size:14px}
-.certnote b{display:block;font:700 16px/1.2 var(--head);margin-bottom:2px}
-.certnote .link{margin-top:4px}
-.dupbox{margin-top:8px;padding:10px 12px;border-radius:8px;border:1.5px solid var(--warn);background:var(--warn-soft);font-size:14px}
-.dupbox b{display:block;font:700 16px/1.2 var(--head);color:var(--warn);margin-bottom:4px}
-.dupbox .mono{font-size:12px;color:var(--muted);margin-top:6px}
-.dupbox .sub{font-size:13px;color:var(--muted);margin-top:8px}
-/* experience time */
-.xp{display:grid;gap:12px;margin-top:16px}
-.xp .r{display:grid;grid-template-columns:3.2em 1fr;gap:4px 10px;align-items:center}
-.xp .r b{font:800 18px/1 var(--head);grid-row:1/3}
-.xp .r small{color:var(--muted);font-size:13px}
-.xp .r.met small{color:var(--ok);font-weight:600}
-.months{display:grid;grid-template-columns:repeat(12,1fr);gap:3px;margin-top:8px}
-.months i{height:22px;border-radius:3px;border:1.5px solid var(--line);font:600 9.5px/19px var(--head);text-align:center;font-style:normal;color:var(--muted)}
-.months i.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
-.cvkey{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--muted);margin-top:10px}
-.cvkey span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px;border:1.5px solid var(--line)}
-.cvkey .k0::before{border:1.5px dashed var(--danger)}.cvkey .k1::before{background:var(--warn);border-color:var(--warn)}
-.cvkey .k2::before{background:var(--accent);border-color:var(--accent)}.cvkey .k3::before{background:var(--accent-soft);border-color:var(--accent)}
-
-/* autocomplete from the CAA lists */
-.sug-wrap{position:relative}
-.sug{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:30;background:var(--card);border:1.5px solid var(--accent);border-radius:8px;max-height:min(300px,45vh);overflow:auto;box-shadow:0 8px 24px rgba(8,12,11,.25);margin:0;padding:4px;list-style:none}
-.sug[hidden]{display:none}
-.sug li{padding:8px 10px;border-radius:6px;cursor:pointer;line-height:1.3}
-.sug li b{display:block;font-weight:600;font-size:15px}
-.sug li small{display:block;color:var(--muted);font-size:12.5px}
-.sug li.on,.sug li:hover{background:var(--accent-soft)}
-.sug .src{padding:6px 10px 4px;font-size:11.5px;color:var(--muted);cursor:default;background:none!important}
-
-@media (prefers-reduced-motion:reduce){*{transition:none!important}}
-@media (max-width:340px){.acts{grid-template-columns:repeat(2,1fr)}}
+code{font-family:var(--mono);font-size:13px;background:var(--field);padding:1px 5px;border-radius:5px;border:1px solid var(--line)}
+ol.steps{padding-left:20px;font-size:14px}ol.steps li{margin:4px 0}
+header{flex-wrap:wrap}
+.modebar{flex-basis:100%;display:flex;gap:3px;padding:3px;border-radius:10px;background:rgba(255,255,255,.1)}
+.modebar button{flex:1;border:0;background:none;color:var(--bar-ink);font:inherit;font-size:14px;font-weight:600;padding:7px 4px;border-radius:8px;opacity:.7;cursor:pointer}
+.modebar button.on{background:var(--accent);color:#10161f;opacity:1}
+body:not([data-view=log]):not([data-view=book]) .modebar{display:none}
+body.cur{--accent:#2fa39a;--accent-soft:#d5efec;--warn:#1d6b64}
+@media (prefers-color-scheme:dark){body.cur{--accent:#4fc3b8;--accent-soft:#163a37;--warn:#80cbc4}}
+body.cur .only-exp,body:not(.cur) .only-cur{display:none}
+mark{background:#ffe08a;color:#10161f;border-radius:3px;padding:0 1px}
+.tag{font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px;font-family:var(--mono);white-space:nowrap}
+.tag.exp{background:#f6e6c8;color:#8a5a00}.tag.cur{background:#d5efec;color:#1d6b64}
+.stat{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;margin:10px 0 4px}
+.stat div{background:var(--field);border:1px solid var(--line);border-radius:10px;padding:8px 4px}
+.stat b{display:block;font-size:22px;font-family:var(--mono)}.stat span{font-size:12px;color:var(--muted)}
+table.mini{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}
+table.mini th{text-align:left;color:var(--muted);font-weight:600;font-size:12px}
+table.mini td,table.mini th{padding:6px 4px;border-bottom:1px solid var(--line)}
+table.mini td.n{font-family:var(--mono);text-align:right}
+.sres{flex-direction:column;align-items:stretch;gap:4px}
+.sres .top{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px}
+.sres .top .d{font-family:var(--mono);font-weight:700}
+.sres .top .s2{color:var(--muted)}
+.sres .snip{font-size:14px;line-height:1.35}
+.sres .snip b{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.3px}
+nav button{font-size:10px}
 </style>
 </head>
 <body>
 <header>
-  <div class="brand"><h1>CAP 741</h1><p>Section 3.1 maintenance experience</p></div>
-  <button class="helplink" id="helpBtn" type="button">Help</button>
+  <h1>CAP <span>741</span> Log</h1>
   <button class="pill off" id="syncPill" type="button">On phone</button>
+  <div class="modebar" id="modebar"><button type="button" data-m="exp" class="on">Experience · CAP 741</button><button type="button" data-m="cur">Work log</button></div>
 </header>
 
 <main>
@@ -283,11 +153,8 @@ ol.steps b{display:block;font:700 16.5px/1.25 var(--head);margin-bottom:2px}
 <section class="view on" id="view-log">
   <h2 id="formTitle">New entry</h2>
 
-  <label style="margin-top:0">Activity type</label>
+  <label>Activity type <span class="opt only-cur">(optional)</span></label>
   <div class="chips acts" id="fActs"></div>
-
-  <label>Experience for</label>
-  <div class="seg purp" id="fPurpose" role="group" aria-label="Experience for"><button type="button" data-p="training">Training</button><button type="button" data-p="certification">Certification</button></div>
 
   <label>Date</label>
   <div class="row">
@@ -298,44 +165,61 @@ ol.steps b{display:block;font:700 16.5px/1.25 var(--head);margin-bottom:2px}
   </div>
   <div class="hint" id="dateHint"></div>
 
-  <label for="fAcText">Aircraft reg</label>
-  <input id="fAcText" class="mono" placeholder="Type a reg, e.g. G-VINP or ZM506" autocapitalize="characters" spellcheck="false">
-  <select id="fAc" hidden></select>
-  <div class="hint" id="acHint"></div>
+  <label>Aircraft reg</label>
+  <select id="fAc"></select>
 
-  <label for="fAtaText">ATA chapter</label>
-  <input id="fAtaText" placeholder="Type a number or name, e.g. 63 or gearbox" spellcheck="false">
-  <select id="fAta" hidden></select>
+  <label>ATA chapter <span class="opt only-cur">(optional)</span></label>
+  <select id="fAta"></select>
 
   <label>Job card number</label>
   <input id="fJob" class="mono" autocomplete="off" autocapitalize="characters">
 
   <fieldset>
     <legend>Task detail</legend>
-    <label>Task <span class="opt">(what you did)</span></label>
+    <label>Task <span class="opt">— what you did</span></label>
     <textarea id="fTask" rows="2" placeholder="e.g. Removed and refitted No.1 engine starter-generator"></textarea>
-    <div class="dupbox" id="dupBox" hidden></div>
+    <div class="only-exp">
     <label>Reason</label>
     <input id="fReason" placeholder="e.g. Scheduled maintenance">
     <div class="chips" id="reasonChips" style="margin-top:8px"></div>
+    </div>
+    <div class="only-cur">
+    <label>Fault / defect</label>
+    <textarea id="fFault" rows="2" placeholder="e.g. DC BUS 2 caution, intermittent in flight"></textarea>
+    <label>Rectification <span class="opt">— what fixed it</span></label>
+    <textarea id="fRect" rows="2" placeholder="e.g. Chafed wire at frame 4 repaired, No.2 GCU replaced"></textarea>
+    <label>Parts <span class="opt">— P/N, S/N off / on</span></label>
+    <input id="fParts" class="mono" placeholder="e.g. P/N 3214-552  S/N off A123 / on B456" autocapitalize="characters">
+    </div>
     <label>Manual reference</label>
     <input id="fManual" placeholder="e.g. AMM 24-30-01">
     <label>Specialist tooling</label>
     <input id="fTooling" placeholder="e.g. Torque wrench 20–100 Nm">
+    <div class="only-exp">
     <label>Challenges</label>
     <textarea id="fChal" rows="2"></textarea>
     <label>Result</label>
     <textarea id="fResult" rows="2" placeholder="e.g. Ground run satisfactory, no leaks"></textarea>
     <div class="fit" id="fitBox">Checking fit…</div>
+    </div>
+    <div class="only-cur">
+    <label>Notes</label>
+    <textarea id="fNotes" rows="2" placeholder="Gotchas, tips for next time, who helped"></textarea>
+    </div>
   </fieldset>
 
-  <div id="supBlock">
+  <div class="only-exp">
   <label>Supervisor</label>
   <input id="fSup" list="supList" placeholder="Pick or type a new name" autocomplete="off" autocapitalize="words">
   <datalist id="supList"></datalist>
   <div class="hint" id="supHint">Their licence number goes on the signature sheet, not on the entry.</div>
   </div>
-  <div class="certnote" id="certNote" hidden></div>
+  <div class="only-cur">
+  <label>Your role</label>
+  <div class="chips" id="fRole"></div>
+  <label>Hours <span class="opt">(optional)</span></label>
+  <input id="fHours" type="number" inputmode="decimal" step="0.25" min="0" placeholder="e.g. 2.5">
+  </div>
 
   <div class="btns">
     <button class="btn block" id="btnSave" type="button">Save entry</button>
@@ -349,44 +233,56 @@ ol.steps b{display:block;font:700 16.5px/1.25 var(--head);margin-bottom:2px}
 
 <!-- ============ LOGBOOK ============ -->
 <section class="view" id="view-book">
-  <h2>Logbook</h2>
-  <div id="xAlert"></div>
-  <details class="cov" id="covBox" open>
-    <summary><b>ATA coverage</b><span id="covSum"></span></summary>
-    <div class="body" id="covBody"></div>
-  </details>
-  <details class="cov" id="expBox" open>
-    <summary><b>Experience time</b><span id="expSum"></span></summary>
-    <div class="body" id="expBody"></div>
-  </details>
+  <h2 id="bookTitle">Logbook</h2>
+  <div class="card only-cur" id="curStats"></div>
   <div class="card">
     <div class="row">
       <div><label style="margin-top:0">Aircraft type</label><select id="xType"></select></div>
       <div><label style="margin-top:0">ATA</label><select id="xAta"></select></div>
     </div>
-    <label>Experience for</label>
-    <select id="xPurpose"><option value="">Training and certification</option><option value="training">Training only</option><option value="certification">Certification only</option><option value="none">Not set yet</option></select>
-    <div id="xUnset"></div>
+    <div class="only-exp">
     <label class="check"><input type="checkbox" id="xSig" checked> Include supervisor signature sheet</label>
     <div id="xWarn"></div>
-    <div class="btns"><button class="btn block" id="btnExport" type="button">Download PDF</button></div>
+    <div class="btns"><button class="btn block" id="btnExport" type="button">Export PDF</button></div>
     <div class="hint" id="xSummary"></div>
+    </div>
+    <div class="only-cur">
+    <div class="btns"><button class="btn block" id="btnCsv" type="button">Export spreadsheet (CSV)</button></div>
+    <div class="hint" id="cSummary"></div>
+    </div>
   </div>
   <div id="bookList"></div>
+</section>
+
+<!-- ============ SEARCH ============ -->
+<section class="view" id="view-search">
+  <h2>Search</h2>
+  <div class="card">
+    <input id="qText" type="search" placeholder="Fault, component, part no., job card…" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <div class="row">
+      <div><label>Aircraft type</label><select id="qType"></select></div>
+      <div><label>ATA</label><select id="qAta"></select></div>
+    </div>
+    <label>Log</label>
+    <div class="chips" id="qLog"><button type="button" class="chip mini on" data-l="all">Both</button><button type="button" class="chip mini" data-l="exp">Experience</button><button type="button" class="chip mini" data-l="cur">Work log</button></div>
+    <div class="hint">Every word must match, in any field — e.g. <i>gcu bus</i> or <i>chip mgb</i>.</div>
+  </div>
+  <div class="hint" id="qCount" style="margin:0 2px 8px"></div>
+  <div class="list" id="qResults"></div>
 </section>
 
 <!-- ============ AIRCRAFT ============ -->
 <section class="view" id="view-ac">
   <h2>Aircraft</h2>
   <div class="list" id="acList"></div>
-  <div class="btns"><button class="btn block" id="btnAddAc" type="button">Add aircraft</button></div>
+  <div class="btns"><button class="btn block" id="btnAddAc" type="button">＋ Add aircraft</button></div>
 </section>
 
 <!-- ============ SUPERVISORS ============ -->
 <section class="view" id="view-sup">
   <h2>Supervisors</h2>
   <div class="list" id="supListView"></div>
-  <div class="btns"><button class="btn block" id="btnAddSup" type="button">Add supervisor</button></div>
+  <div class="btns"><button class="btn block" id="btnAddSup" type="button">＋ Add supervisor</button></div>
 </section>
 
 <!-- ============ SETTINGS ============ -->
@@ -395,18 +291,6 @@ ol.steps b{display:block;font:700 16.5px/1.25 var(--head);margin-bottom:2px}
   <div class="card">
     <label style="margin-top:0">Logbook owner's name <span class="opt">(printed on every page)</span></label>
     <input id="sOwner" autocapitalize="words">
-    <div class="row"><div><label>Your licence cat.</label><input id="sOwnerCat" placeholder="B1.3"></div>
-    <div><label>Your licence number</label><input id="sOwnerLic" class="mono" autocapitalize="characters" placeholder="UK.66.…"></div></div>
-    <label>Your MRO &amp; approval number</label><input id="sOwnerMro" placeholder="Type a company, town or UK.145 number">
-    <div class="hint">Used when you mark a job as certification: your name and licence go in the supervisor box, and you're added to the signature sheet.</div>
-  </div>
-
-  <h3>Pages and printing</h3>
-  <div class="card">
-    <label class="check" style="margin-top:0"><input type="checkbox" id="sAskPrint"> Ask to print when a page fills up</label>
-    <div class="hint">A page holds five rows for one aircraft type and one ATA chapter. When the last row is used you're offered a PDF of just that page, ready to sign.</div>
-    <label>Long entries spill into the rows below. Mark the other columns of those rows with</label>
-    <div class="seg" id="sMark"><button type="button" data-m="&quot;">" ditto</button><button type="button" data-m="–">– dash</button></div>
   </div>
 
   <h3>Dropbox sync</h3>
@@ -414,7 +298,7 @@ ol.steps b{display:block;font:700 16.5px/1.25 var(--head);margin-bottom:2px}
 
   <h3>Backup</h3>
   <div class="card">
-    <div class="hint" style="margin-top:0">A backup file holds every entry, aircraft and supervisor. Importing merges it in, and newer data is never overwritten by older data.</div>
+    <div class="hint" style="margin-top:0">A backup file holds every entry, aircraft and supervisor. Importing merges it in — nothing is overwritten with older data.</div>
     <div class="btns">
       <button class="btn sec" id="btnBackup" type="button">Save backup</button>
       <button class="btn sec" id="btnImport" type="button">Import backup</button>
@@ -433,20 +317,21 @@ ol.steps b{display:block;font:700 16.5px/1.25 var(--head);margin-bottom:2px}
   </div>
 
   <h3>About</h3>
-  <div class="card hint" style="margin:0">Entries are typed into the CAA's own CAP 741 Section 3.1 pages (Issue 4). Supervisors sign and stamp in ink; you sign each page. Data stays on this phone and in your own Dropbox.</div>
+  <div class="card hint" style="margin:0">Experience entries are typed into the CAA's own CAP 741 Section 3.1 pages (Issue 4); supervisors sign and stamp in ink and you sign each page. The Work log is your own post-licence record and exports as a spreadsheet. Data stays on this phone and in your own Dropbox.</div>
 </section>
 </main>
 
 <nav id="nav">
   <button data-v="log" class="on" type="button"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Entry</button>
   <button data-v="book" type="button"><svg viewBox="0 0 24 24"><path d="M4 4h11a3 3 0 0 1 3 3v13H7a3 3 0 0 1-3-3z"/><path d="M8 9h6M8 13h6"/></svg>Logbook</button>
+  <button data-v="search" type="button"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>Search</button>
   <button data-v="ac" type="button"><svg viewBox="0 0 24 24"><path d="M3 9h18M12 9v4M12 13l-5 3M12 13l5 3M9 6h6"/><circle cx="12" cy="18" r="1.5"/></svg>Aircraft</button>
   <button data-v="sup" type="button"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>Supervisors</button>
   <button data-v="set" type="button"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Settings</button>
 </nav>
 
 <dialog id="modal"><div class="dh"><span id="mTitle"></span><button class="x-btn" id="mClose" type="button" aria-label="Close">×</button></div><div class="db" id="mBody"></div></dialog>
-<div id="toast" role="status"></div>
+<div id="toast"></div>
 
 <script src="pdf-lib.min.js"></script>
 <script>
@@ -460,14 +345,10 @@ const DBX_PATH = '/cap741-log.json';
 
 /* ---------- reference data ---------- */
 const ACTS = [
-  ['INSP','Inspection'],['FOT','Functional / Op test'],['SGH','Service & ground handling'],
+  ['LOC','Location'],['FOT','Functional / Op test'],['SGH','Service & ground handling'],
   ['R/I','Removal / Installation'],['MEL','Min. equipment list'],['TS','Troubleshooting'],
   ['REP','Repair'],['EW','Electrical / Wiring'],['MOD','Modification']
 ];
-// Activity types are spelled out in full on the printed page; the narrow column lets them shrink to 5pt
-const ACT_FULL = {INSP:'Inspection',FOT:'Functional / Operational test',SGH:'Service & Ground handling','R/I':'Removal / Installation',
-  MEL:'Minimum Equipment List',TS:'Troubleshooting',REP:'Repair',EW:'Electrical / Wiring',MOD:'Modification'};
-const ACT_SIZES = [7,6.5,6,5.5,5];
 const ATA = [
   ['05','Time Limits/Maintenance Checks'],['06','Dimensions and Areas'],['07','Lifting and Shoring'],['08','Levelling and Weighing'],
   ['09','Towing and Taxiing'],['10','Parking, Mooring, Storage'],['11','Placards and Markings'],['12','Servicing'],
@@ -485,36 +366,7 @@ const ATA = [
 ];
 const ATA_NAME = Object.fromEntries(ATA);
 const REASONS = ['Scheduled maintenance','Defect rectification','MEL rectification','Component change (life)','Modification / SB','AD compliance'];
-/* Chapters that matter for each licence (sub)category, split into main systems and the rest.
-   The CAA sets no minimum per chapter: targets are the industry rule of thumb, counted as distinct tasks. */
-const LICENCES = {
-  'B1.1':{label:'B1.1 Aeroplanes, turbine',main:['21','24','27','28','29','32','71','72','73','74','75','76','77','79','80'],
-    other:['05','12','20','22','23','25','26','30','31','33','34','35','36','38','45','46','49','51','52','53','54','55','56','57','61','78']},
-  'B1.2':{label:'B1.2 Aeroplanes, piston',main:['24','27','28','29','32','61','71','72','73','74','76','77','79','80','85'],
-    other:['05','12','20','21','22','23','25','26','30','31','33','34','35','37','51','52','53','55','56','57','78']},
-  'B1.3':{label:'B1.3 Helicopters, turbine',main:['24','27','28','29','32','62','63','64','65','67','71','72','73','74','75','76','77','79','80'],
-    other:['05','12','18','20','21','22','23','25','26','30','31','33','34','35','36','39','45','46','51','52','53','54','56','66','78']},
-  'B1.4':{label:'B1.4 Helicopters, piston',main:['24','27','28','29','32','62','63','64','65','67','71','72','73','74','76','77','79','80','85'],
-    other:['05','12','18','20','21','22','23','25','26','30','31','33','34','35','51','52','53','56','78']},
-  'B2':{label:'B2 Avionics',main:['22','23','24','31','34'],
-    other:['21','25','26','27','28','29','30','33','35','36','38','44','45','46','49','73','77']}
-};
-const TARGETS = {main:[5,10],other:[2,5]};
-// Activity types that show more than routine work (component change, testing, fault finding, repair, mods, wiring)
-const VARIED = new Set(['R/I','FOT','TS','REP','MOD','EW']);
-// Part-66 (66.A.30) basic experience in years, by route: [no previous technical training, relevant technical training, Part-147 basic course]
-const EXP_YEARS = {'B1.1':[5,3,2],'B1.3':[5,3,2],'B2':[5,3,2],'B1.2':[3,2,1],'B1.4':[3,2,1]};
-const ROUTES = [['none','No previous technical training'],['skilled','Relevant technical training (skilled worker)'],['p147','UK Part-147 approved basic training course']];
-/* Two task descriptions count as the same task if they match exactly, or share most of their key words */
-const STOP = new Set(['and','the','with','for','iaw','was','were','carried','out','from','into','per','using','of','on','in','to','a','an','no','nil']);
-const keyWords = t => new Set(String(t||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').split(' ').filter(w=>w.length>1&&!STOP.has(w)));
-function sameTask(a,b){
-  if(compact(a)&&compact(a)===compact(b)) return true;
-  const A=keyWords(a),B=keyWords(b);
-  if(A.size<3||B.size<3) return false;
-  let both=0;for(const w of A) if(B.has(w)) both++;
-  return both/(A.size+B.size-both)>=0.6;
-}
+const ROLES = ['Certified (CRS)','Performed','Inspected','Supervised','Assisted'];
 const MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
 
 /* ---------- template geometry (points, measured from top of the A4-landscape CAA page) ---------- */
@@ -532,7 +384,6 @@ const ROWS_PER_PAGE = 5, SIGS_PER_PAGE = 10, PAD = 3;
 const TASK_W = TASK.cols.task[1]-TASK.cols.task[0]-PAD*2;
 const TASK_H = Math.min(...TASK.rows.slice(1).map((r,i)=>r-TASK.rows[i])) - PAD*2;
 const SIZES = [8,7.5,7,6.5,6];
-const TASK_SIZES = [8,7.5,7];   // task text never shrinks below 7pt — it spills into the next row instead
 
 /* ---------- tiny helpers ---------- */
 const $ = id => document.getElementById(id);
@@ -564,11 +415,6 @@ function typeLabel(ac){
   return ac.engine ? `${base} (${ac.engine})` : base || ac.reg;
 }
 const ataLabel = c => c ? `${c} - ${ATA_NAME[c]||''}` : '';
-const groupKey = e => e.ata+'|'+typeLabel(acById(e.aircraftId));
-const contMark = () => S.settings.contMark||'"';
-const isCert = e => e.purpose==='certification';
-const ownerSigner = () => ({name:S.settings.ownerName||'',cat:S.settings.ownerCat||'',licNo:S.settings.ownerLic||'',mro:S.settings.ownerMro||''});
-const askPrintOn = () => S.settings.askPrint!==false;
 
 /* ---------- IndexedDB key/value store ---------- */
 const idb = (()=>{
@@ -581,13 +427,6 @@ const idb = (()=>{
 /* ---------- state ---------- */
 let S, DEV;               // S = synced logbook data, DEV = this-device-only data (tokens)
 let editingId = null;
-/* Older entries used LOC (location) for inspections; it's now INSP. Converted entries are marked as
-   changed so the new code wins when syncing with another device. Returns true if anything changed. */
-function upgradeActs(){
-  let n=0;const t=now();
-  S.entries=S.entries.map(e=>e.acts&&e.acts.includes('LOC')?(n++,{...e,acts:[...new Set(e.acts.map(a=>a==='LOC'?'INSP':a))],updatedAt:t}):e);
-  return n>0;
-}
 const blank = () => ({v:1,settings:{ownerName:'',updatedAt:0},aircraft:[],supervisors:[],entries:[]});
 const acById = id => S.aircraft.find(a=>a.id===id);
 const supById = id => S.supervisors.find(s=>s.id===id);
@@ -598,39 +437,14 @@ async function save(sync=true){
 }
 function upsert(list,obj){obj.updatedAt=now();const i=list.findIndex(x=>x.id===obj.id);if(i>=0)list[i]=obj;else list.push(obj);}
 function tombstone(list,id){const i=list.findIndex(x=>x.id===id);if(i>=0)list[i]={id,deleted:true,updatedAt:now()};}
-// each setting remembers when it was last changed (in _t), so sync merges them one box at a time
-async function setSetting(k,v){const t=now();S.settings={...S.settings,[k]:v,updatedAt:t,_t:{...(S.settings._t||{}),[k]:t}};await save();}
-function mergeSettings(a={},b={}){
-  // older files have no _t: every box in them counts as changed when the whole block was
-  const when=(s,k)=>s._t?.[k]??(k in s?(s.updatedAt||0):-1);
-  const out={_t:{}};
-  for(const k of new Set([...Object.keys(a),...Object.keys(b)])){
-    if(k==='updatedAt'||k==='_t') continue;
-    const ta=when(a,k),tb=when(b,k);
-    // newer wins; on a tie, a filled-in box beats an empty one
-    const pick=tb>ta||(tb===ta&&(a[k]===''||a[k]==null))?b:a;
-    if(k in pick){out[k]=pick[k];out._t[k]=Math.max(ta,tb,0);}
-  }
-  out.updatedAt=Math.max(a.updatedAt||0,b.updatedAt||0);
-  return out;
-}
 
 function merge(a,b){
-  const out={v:1,settings:mergeSettings(a.settings||blank().settings,b.settings||{})};
-  const alive={};   // newest non-deleted copy of each aircraft/supervisor, from either side
+  const out={v:1,settings:((b.settings?.updatedAt||0)>(a.settings?.updatedAt||0)?b.settings:a.settings)||blank().settings};
   for(const k of ['aircraft','supervisors','entries']){
-    const m=new Map();alive[k]=new Map();
-    for(const x of [...(a[k]||[]),...(b[k]||[])]){
-      const y=m.get(x.id);if(!y||(x.updatedAt||0)>(y.updatedAt||0))m.set(x.id,x);
-      if(!x.deleted){const z=alive[k].get(x.id);if(!z||(x.updatedAt||0)>(z.updatedAt||0))alive[k].set(x.id,x);}
-    }
+    const m=new Map();
+    for(const x of [...(a[k]||[]),...(b[k]||[])]){const y=m.get(x.id);if(!y||(x.updatedAt||0)>(y.updatedAt||0))m.set(x.id,x);}
     out[k]=[...m.values()];
   }
-  // An aircraft or supervisor deleted on one device but still used by entries comes back, so those
-  // entries never lose their aircraft. (The app won't delete one that's in use, so this only undoes accidents.)
-  const used={aircraft:new Set(),supervisors:new Set()};
-  for(const e of out.entries) if(!e.deleted){used.aircraft.add(e.aircraftId);used.supervisors.add(e.supervisorId);}
-  for(const k of ['aircraft','supervisors']) out[k]=out[k].map(x=>x.deleted&&used[k].has(x.id)&&alive[k].has(x.id)?{...alive[k].get(x.id),updatedAt:(x.updatedAt||0)+1}:x);
   return out;
 }
 
@@ -644,7 +458,7 @@ async function measureFonts(){
 }
 const encOK=new Map();
 function clean(str,font){
-  str=String(str??'').replace(/\r/g,'').replace(/\t/g,' ').replace(/[→]/g,'->').replace(/[≤]/g,'<=').replace(/[≥]/g,'>=').replace(/[   ]/g,' ');
+  str=String(str??'').replace(/\r/g,'').replace(/\t/g,' ').replace(/[→]/g,'->').replace(/[≤]/g,'<=').replace(/[≥]/g,'>=').replace(/[   ]/g,' ');
   let out='';
   for(const ch of str){
     if(ch==='\n'){out+=ch;continue;}
@@ -687,10 +501,8 @@ function fit(segs,w,h,F,sizes=SIZES){
   let last;
   for(const s of sizes){
     const lh=s*1.16, lines=layout(toks,s,w,F), maxLines=Math.max(1,Math.floor((h+lh-s)/lh));
-    // shrink rather than split a word across lines, unless this is already the smallest size
-    const whole=toks.every(t=>t.nl||(t.b?F.b:F.r).widthOfTextAtSize(t.w,s)<=w);
     last={size:s,lh,lines,maxLines,ok:lines.length<=maxLines};
-    if(last.ok&&(whole||s===sizes[sizes.length-1])) return last;
+    if(last.ok) return last;
   }
   return last;
 }
@@ -701,52 +513,6 @@ function taskSegs(e){
   add('Reason: ',e.reason);add('Ref: ',e.manual);add('Tooling: ',e.tooling);add('Challenges: ',e.challenges);add('Result: ',e.result);
   return segs;
 }
-/* How many page rows an entry's task text needs. Prefer one row (shrinking the font a little),
-   otherwise spill into rows below at the largest size that keeps the row count lowest.
-   Returns {k rows, size, lh, per (lines per row), lines, ok}. ok=false means it overflows a whole page. */
-const layCache=new Map();
-function entryLayout(e){
-  const segs=taskSegs(e),key=JSON.stringify(segs);
-  if(layCache.has(key)) return layCache.get(key);
-  const toks=tokenize(segs,MF);
-  const by=TASK_SIZES.map(s=>{const lh=s*1.16;return {size:s,lh,lines:layout(toks,s,TASK_W,MF),per:Math.max(1,Math.floor((TASK_H+lh-s)/lh))};});
-  let r=null;
-  for(let k=1;k<=ROWS_PER_PAGE&&!r;k++) for(const b of by) if(b.lines.length<=k*b.per){r={...b,k,ok:true};break;}
-  if(!r){
-    const b=by[by.length-1],cap=ROWS_PER_PAGE*b.per,lines=b.lines.slice(0,cap);
-    const l=lines[cap-1];if(l&&l.length)lines[cap-1]=[...l.slice(0,-1),{...l[l.length-1],w:l[l.length-1].w+'...'}];
-    r={...b,lines,k:ROWS_PER_PAGE,ok:false,total:b.lines.length,cap};
-  }
-  if(layCache.size>400) layCache.clear();
-  layCache.set(key,r);return r;
-}
-const rowLines=(L,j)=>L.lines.slice(j*L.per,(j+1)*L.per);
-const linesText=ls=>ls.map(l=>l.map(t=>t.w).join(' ')).join(' ');
-
-/* ---------- page packing: one aircraft type + one ATA per page, five rows, entries never split across pages ---------- */
-function groupPages(entries){
-  const groups=new Map();
-  for(const e of entries){
-    const key=groupKey(e);
-    if(!groups.has(key)) groups.set(key,{key,ata:e.ata,type:typeLabel(acById(e.aircraftId)),entries:[]});
-    groups.get(key).entries.push(e);
-  }
-  const arr=[...groups.values()].sort((a,b)=>(+a.ata- +b.ata)||a.type.localeCompare(b.type));
-  const pages=[];
-  for(const g of arr){
-    g.entries.sort((a,b)=>a.date.localeCompare(b.date)||(a.createdAt||0)-(b.createdAt||0));
-    const gp=[];let pg=null;
-    for(const e of g.entries){
-      const L=entryLayout(e);
-      if(!pg||pg.used+L.k>ROWS_PER_PAGE){pg={key:g.key,ata:g.ata,type:g.type,items:[],used:0};gp.push(pg);}
-      pg.items.push({e,slot:pg.used,L});pg.used+=L.k;
-    }
-    gp.forEach((p,i)=>{p.n=i+1;p.of=gp.length;p.full=p.used>=ROWS_PER_PAGE||i<gp.length-1;p.entries=p.items.map(x=>x.e);});
-    pages.push(...gp);
-  }
-  return pages;
-}
-const pageSig = p => p.key+':'+p.entries.map(e=>e.id).join(',');
 
 /* ---------- PDF export ---------- */
 async function templateBytes(){
@@ -756,7 +522,23 @@ async function templateBytes(){
   if(!r.ok) throw new Error('Template PDF not found next to the app');
   return {bytes:new Uint8Array(await r.arrayBuffer()),taskPage:1,sigPage:2,name:'Built-in (CAP 741 Issue 4)'};
 }
-async function buildPdf(pages,withSig){
+function groupPages(entries){
+  const groups=new Map();
+  for(const e of entries){
+    const ty=typeLabel(acById(e.aircraftId));const key=e.ata+'|'+ty;
+    if(!groups.has(key)) groups.set(key,{ata:e.ata,type:ty,entries:[]});
+    groups.get(key).entries.push(e);
+  }
+  const arr=[...groups.values()].sort((a,b)=>(+a.ata- +b.ata)||a.type.localeCompare(b.type));
+  const pages=[];
+  for(const g of arr){
+    g.entries.sort((a,b)=>a.date.localeCompare(b.date)||(a.createdAt||0)-(b.createdAt||0));
+    const n=Math.ceil(g.entries.length/ROWS_PER_PAGE);
+    for(let i=0;i<n;i++) pages.push({ata:g.ata,type:g.type,entries:g.entries.slice(i*ROWS_PER_PAGE,(i+1)*ROWS_PER_PAGE),n:i+1,of:n});
+  }
+  return pages;
+}
+async function buildPdf(entries,withSig){
   const {PDFDocument,StandardFonts,rgb}=PDFLib;
   const T=await templateBytes();
   const tpl=await PDFDocument.load(T.bytes);
@@ -765,7 +547,6 @@ async function buildPdf(pages,withSig){
   const INK=rgb(0.07,0.11,0.33);
   const owner=S.settings.ownerName||'';
   const H=pg=>pg.getHeight();
-  const entries=pages.flatMap(p=>p.entries);
 
   const line=(pg,text,x,base,max,size=10,bold=false)=>{
     text=clean(text,F.r);const f=bold?F.b:F.r;let s=size;
@@ -783,21 +564,11 @@ async function buildPdf(pages,withSig){
     if(valign==='bottom') y0=bottom-PAD-blockH+r.size*0.82;
     lines.forEach((ln,i)=>ln.forEach(t=>pg.drawText(t.w,{x:x0+PAD+t.x,y:H(pg)-(y0+i*r.lh),size:r.size,font:t.b?F.b:F.r,color:INK})));
   };
-  const drawLines=(pg,lines,L,x0,top)=>lines.forEach((ln,i)=>ln.forEach(t=>
-    pg.drawText(t.w,{x:x0+PAD+t.x,y:H(pg)-(top+PAD+L.size*0.82+i*L.lh),size:L.size,font:t.b?F.b:F.r,color:INK})));
-  // ditto / dash centred in a continuation cell; a quote mark sits high, so drop its baseline further
-  const drawMark=(pg,[x0,x1],top,bot)=>{
-    const m=contMark(),s=13,w=F.r.widthOfTextAtSize(m,s),drop=m==='"'?0.62:0.3;
-    pg.drawText(m,{x:(x0+x1)/2-w/2,y:H(pg)-((top+bot)/2+s*drop),size:s,font:F.r,color:INK});
-  };
 
   // Signature sheet(s) first
   if(withSig){
-    const ids=[...new Set(entries.filter(e=>!isCert(e)).map(e=>e.supervisorId).filter(Boolean))];
+    const ids=[...new Set(entries.map(e=>e.supervisorId).filter(Boolean))];
     const sups=ids.map(supById).filter(Boolean).sort((a,b)=>a.name.localeCompare(b.name));
-    // certified jobs are signed by the logbook owner, so they go on the sheet too (once)
-    const me=ownerSigner();
-    if(entries.some(isCert)&&me.name&&!sups.some(x=>x.licNo&&x.licNo===me.licNo)) sups.push(me);
     for(let p=0;p<Math.max(1,Math.ceil(sups.length/SIGS_PER_PAGE));p++){
       const [pg]=await doc.copyPages(tpl,[T.sigPage-1]);doc.addPage(pg);
       sups.slice(p*SIGS_PER_PAGE,(p+1)*SIGS_PER_PAGE).forEach((s,i)=>{
@@ -811,38 +582,29 @@ async function buildPdf(pages,withSig){
     }
   }
   // Task pages
-  for(const P of pages){
+  for(const P of groupPages(entries)){
     const [pg]=await doc.copyPages(tpl,[T.taskPage-1]);doc.addPage(pg);
     line(pg,P.type,TASK.type.x,TASK.type.base,TASK.type.max,10);
     line(pg,ataLabel(P.ata),TASK.ata.x,TASK.ata.base,TASK.ata.max,10);
     if(owner) line(pg,owner,TASK.owner.x,TASK.owner.base,TASK.owner.max,10);
-    P.items.forEach(({e,slot,L})=>{
-      const C=TASK.cols,ac=acById(e.aircraftId),sup=isCert(e)?ownerSigner():supById(e.supervisorId);
-      for(let j=0;j<L.k;j++){
-        const top=TASK.rows[slot+j],bot=TASK.rows[slot+j+1];
-        if(j===0){
-          drawBox(pg,[{t:(e.acts||[]).map(c=>ACT_FULL[c]||c).join('\n')}],...C.act,top,bot,{sizes:ACT_SIZES});
-          drawBox(pg,[{t:fmtD(e.date)}],...C.date,top,bot);
-          drawBox(pg,[{t:ac?ac.reg:''}],...C.reg,top,bot);
-          drawBox(pg,[{t:e.job||''}],...C.job,top,bot);
-        }else{
-          for(const c of ['act','date','reg','job']) drawMark(pg,C[c],top,bot);
-        }
-        // supervisor signs once, in the lowest row of the entry; rows above carry the mark
-        if(j<L.k-1) drawMark(pg,C.sup,top,bot);
-        else if(sup) drawBox(pg,[{t:isCert(e)?[sup.name,[sup.licNo,sup.cat].filter(Boolean).join(' ')].filter(Boolean).join('\n'):sup.name}],C.sup[0],C.sup[1],top,bot,{valign:'bottom',sizes:[8,7.5,7,6.5,6]});
-        drawLines(pg,rowLines(L,j),L,C.task[0],top);
-      }
+    P.entries.forEach((e,i)=>{
+      const top=TASK.rows[i],bot=TASK.rows[i+1],C=TASK.cols,ac=acById(e.aircraftId);
+      drawBox(pg,[{t:(e.acts||[]).join('\n')}],...C.act,top,bot);
+      drawBox(pg,[{t:fmtD(e.date)}],...C.date,top,bot);
+      drawBox(pg,[{t:ac?ac.reg:''}],...C.reg,top,bot);
+      drawBox(pg,[{t:e.job||''}],...C.job,top,bot);
+      drawBox(pg,taskSegs(e),...C.task,top,bot);
+      const sup=supById(e.supervisorId);
+      if(sup) drawBox(pg,[{t:sup.name}],C.sup[0],C.sup[1],top,bot,{valign:'bottom',sizes:[8,7.5,7,6.5,6]});
     });
   }
   doc.setTitle('CAP 741 Section 3.1'+(owner?' - '+owner:''));
   doc.setCreator('CAP 741 Log');
   return doc.save();
 }
-// PDFs download straight to the device (Files > Downloads on iPhone); backups still open the share sheet
-async function deliver(bytes,name,mime='application/pdf',{share=true}={}){
+async function deliver(bytes,name,mime='application/pdf'){
   const file=new File([bytes],name,{type:mime});
-  if(share&&navigator.canShare&&navigator.canShare({files:[file]})){
+  if(navigator.canShare&&navigator.canShare({files:[file]})){
     try{await navigator.share({files:[file],title:name});return;}
     catch(e){if(e.name==='AbortError')return;}
   }
@@ -850,32 +612,36 @@ async function deliver(bytes,name,mime='application/pdf',{share=true}={}){
   a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
   setTimeout(()=>URL.revokeObjectURL(url),60000);
 }
-async function exportPages(pages,withSig,btn){
-  const label=btn?.textContent;
-  if(btn){btn.disabled=true;btn.textContent='Building PDF…';}
-  try{
-    const bytes=await buildPdf(pages,withSig);
-    const who=(S.settings.ownerName||'logbook').replace(/[^A-Za-z0-9]+/g,'-');
-    const what=pages.length===1?`ATA${pages[0].ata}-${pages[0].type.replace(/[^A-Za-z0-9]+/g,'-').replace(/^-|-$/g,'')}-p${pages[0].n}`:'S3.1';
-    await deliver(bytes,`CAP741-${what}-${who}-${fmtD(todayISO())}.pdf`,'application/pdf',{share:false});
-    toast('PDF downloaded');
-  }catch(err){console.error(err);alert('PDF download failed: '+err.message);}
-  if(btn){btn.disabled=false;btn.textContent=label;}
-}
 
 /* ---------- navigation ---------- */
 function show(v){
+  document.body.dataset.view=v;
   document.querySelectorAll('.view').forEach(s=>s.classList.toggle('on',s.id==='view-'+v));
   document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
-  ({book:renderBook,ac:renderAc,sup:renderSups,set:renderSettings}[v]||(()=>{}))();
+  ({book:renderBook,search:renderSearch,ac:renderAc,sup:renderSups,set:renderSettings}[v]||(()=>{}))();
   window.scrollTo(0,0);
 }
-$('nav').addEventListener('click',e=>{
-  const b=e.target.closest('button');if(!b)return;
-  // the Entry tab always means a new entry; editing only happens from the Logbook
-  if(b.dataset.v==='log'&&editingId){newEntry();toast('Edit closed. This is a new entry.');}
-  show(b.dataset.v);
-});
+$('nav').addEventListener('click',e=>{const b=e.target.closest('button');if(b)show(b.dataset.v);});
+
+/* ---------- log mode: experience (CAP 741) / work log ---------- */
+let MODE='exp';
+const logOf=e=>e.log||'exp';
+function setMode(m,{boot=false}={}){
+  MODE=m==='cur'?'cur':'exp';
+  document.body.classList.toggle('cur',MODE==='cur');
+  document.querySelectorAll('#modebar button').forEach(b=>b.classList.toggle('on',b.dataset.m===MODE));
+  updateTitles();
+  if(boot) return;
+  DEV.mode=MODE;saveDev();
+  if(document.body.dataset.view==='book') renderBook();
+  if(MODE==='exp') updateFit();
+  saveDraft();
+}
+function updateTitles(){
+  $('formTitle').textContent=(editingId?'Edit ':'New ')+(MODE==='cur'?'work log entry':'experience entry');
+  $('bookTitle').textContent=MODE==='cur'?'Work log':'Experience logbook';
+}
+$('modebar').addEventListener('click',e=>{const b=e.target.closest('button');if(b&&b.dataset.m!==MODE)setMode(b.dataset.m);});
 
 /* ---------- modal ---------- */
 const modal=$('modal');
@@ -883,154 +649,24 @@ function openModal(title,html,onReady){$('mTitle').textContent=title;$('mBody').
 const closeModal=()=>modal.close();
 $('mClose').onclick=closeModal;
 
-/* ---------- CAA lists: Part-66 type ratings and Part 145 organisations (data/*.json, built by tools/build-lists.py) ---------- */
-const LISTS={};
-const compact=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,'');
-const titleish=s=>s.replace(/\b[A-Z][A-Z]{3,}\b/g,w=>w[0]+w.slice(1).toLowerCase()).replace(/\(THE\)/,'(The)');
-function loadList(name){
-  return LISTS[name]||(LISTS[name]=fetch('data/'+name+'.json').then(r=>{if(!r.ok)throw new Error(r.status);return r.json();})
-    .then(d=>{
-      if(name==='part66-types'){
-        d.items=d.r.map(([hi,model,desig,ei])=>({make:d.h[hi],model,desig,rating:d.e[ei],hay:compact(model+' '+desig+' '+d.e[ei]+' '+d.h[hi]),m:compact(model+' '+desig)}));
-        d.ratings=d.e.map(rating=>({rating,hay:compact(rating)}));
-      }else d.items=d.r.map(([name,ref,town])=>({name,ref,town,hay:compact(name+' '+ref+' '+town)}));
-      return d;
-    }).catch(err=>{console.warn(name,err);delete LISTS[name];return null;}));
-}
-function search(items,q,rank,max=8){
-  const words=q.toLowerCase().split(/\s+/).map(compact).filter(Boolean);
-  if(!words.length) return [];
-  const hits=items.filter(it=>words.every(w=>it.hay.includes(w)));
-  return hits.map(it=>[rank(it,words[0]),it]).sort((a,b)=>a[0]-b[0]).slice(0,max).map(x=>x[1]);
-}
-/* Attach a suggestion list under an input. Typing still works freely; picking a row calls pick(item). */
-function attachSuggest(input,{list,local,source,find,row,pick,minLen=2,onFocus=false}){
-  const wrap=document.createElement('div');wrap.className='sug-wrap';
-  input.parentNode.insertBefore(wrap,input);wrap.appendChild(input);
-  const ul=document.createElement('ul');ul.className='sug';ul.hidden=true;ul.setAttribute('role','listbox');wrap.appendChild(ul);
-  input.setAttribute('autocomplete','off');
-  let items=[],sel=-1,src='';
-  const close=()=>{ul.hidden=true;sel=-1;};
-  const paint=()=>{ul.querySelectorAll('li[data-i]').forEach(li=>li.classList.toggle('on',+li.dataset.i===sel));};
-  const choose=i=>{const it=items[i];if(!it)return;pick(it);close();};
-  const update=async()=>{
-    const q=input.value.trim();
-    if(q.length<minLen&&!(onFocus&&!q)){close();return;}
-    const d=local?{items:local(),source}:await loadList(list);if(!d||input.value.trim()!==q) return;
-    items=find(d,q);src=local?source:'the '+d.source;sel=-1;
-    if(!items.length){close();return;}
-    ul.innerHTML=items.map((it,i)=>`<li data-i="${i}" role="option">${row(it)}</li>`).join('')+(src?`<li class="src">From ${esc(src)}</li>`:'');
-    ul.hidden=false;
-  };
-  input.addEventListener('input',update);
-  if(onFocus) input.addEventListener('focus',update);
-  ul.addEventListener('pointerdown',e=>e.preventDefault());   // keep focus so blur doesn't close before the tap lands
-  ul.addEventListener('click',e=>{const li=e.target.closest('li[data-i]');if(li)choose(+li.dataset.i);});
-  input.addEventListener('keydown',e=>{
-    if(ul.hidden) return;
-    if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();sel=(sel+(e.key==='ArrowDown'?1:-1)+items.length)%items.length;paint();}
-    else if(e.key==='Enter'&&sel>=0){e.preventDefault();choose(sel);}
-    else if(e.key==='Escape') close();
-  });
-  input.addEventListener('blur',()=>setTimeout(close,120));
-}
-const findTypes=(d,q)=>search(d.items,q,(it,w)=>it.m.startsWith(w)?0:it.m.includes(w)?1:2);
-const findRatings=(d,q)=>search(d.ratings,q,(it,w)=>it.hay.startsWith(w)?0:1);
-const findOrgs=(d,q)=>search(d.items,q,(it,w)=>compact(it.name).startsWith(w)?0:it.ref.endsWith(w)?0:1);
-const engineOf=rating=>(rating.match(/\(([^()]*)\)\s*$/)||[])[1]||'';
-
 /* ---------- ENTRY FORM ---------- */
-let acts=new Set(),purpose='';
-const PURPOSE={training:'Training',certification:'Certification'};
-function renderPurpose(){
-  document.querySelectorAll('#fPurpose button').forEach(b=>{b.classList.toggle('on',b.dataset.p===purpose);b.setAttribute('aria-pressed',b.dataset.p===purpose);});
-  // a certified job has no supervisor: you sign it yourself
-  $('supBlock').hidden=purpose==='certification';updateCertNote();
-}
-function updateCertNote(){
-  const n=$('certNote');n.hidden=purpose!=='certification';if(n.hidden)return;
-  const o=ownerSigner();
-  n.innerHTML=o.licNo?`<b>You certify this job</b>${esc(o.name||'Your name')}, ${esc(o.licNo)}${o.cat?' ('+esc(o.cat)+')':''} goes in the supervisor box.`
-    :`<b>You certify this job</b>Your details go in the supervisor box. <button type="button" class="link" id="certSet">Add your licence number in Settings</button>`;
-  const b=$('certSet');if(b)b.onclick=()=>show('set');
-}
-$('fPurpose').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;purpose=purpose===b.dataset.p?'':b.dataset.p;renderPurpose();saveDraft();});
+const F_IDS=['fDate','fAc','fAta','fJob','fTask','fReason','fManual','fTooling','fChal','fResult','fSup'];
+let acts=new Set();
 
 function renderActs(){
-  $('fActs').innerHTML=ACTS.map(([c,m])=>`<button type="button" class="chip${acts.has(c)?' on':''}" data-c="${c}" aria-pressed="${acts.has(c)}"><b>${c}</b><small>${m}</small></button>`).join('');
+  $('fActs').innerHTML=ACTS.map(([c,m])=>`<button type="button" class="chip${acts.has(c)?' on':''}" data-c="${c}"><b>${c}</b><small>${m}</small></button>`).join('');
 }
 $('fActs').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;const c=b.dataset.c;acts.has(c)?acts.delete(c):acts.add(c);renderActs();saveDraft();});
+let role='';
+function renderRole(){$('fRole').innerHTML=ROLES.map(r=>`<button type="button" class="chip mini${role===r?' on':''}">${r}</button>`).join('');}
+$('fRole').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;role=role===b.textContent?'':b.textContent;renderRole();saveDraft();});
 $('reasonChips').innerHTML=REASONS.map(r=>`<button type="button" class="chip mini">${r}</button>`).join('');
 $('reasonChips').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;$('fReason').value=b.textContent;onFormInput();});
 
-/* Typed aircraft and ATA boxes. The hidden selects hold the real value (aircraft id, ATA code);
-   the text boxes show it and suggest from your aircraft and the ATA list as you type. */
-function syncAcText(){
-  const a=acById($('fAc').value);
-  $('fAcText').value=a&&!a.deleted?a.reg:'';
-  $('acHint').textContent=a&&!a.deleted?typeLabel(a):'';
-}
-function syncAtaText(){const c=$('fAta').value;$('fAtaText').value=c?`${c} – ${ATA_NAME[c]||''}`:'';}
-function setAc(id){$('fAc').value=id;syncAcText();lastAc=id;saveDraft();updateFit();}
-function setAta(c){$('fAta').value=c;syncAtaText();onFormInput();}
-const acItems=()=>live(S.aircraft).map(a=>({a,hay:compact(a.reg+' '+typeLabel(a)),r:compact(a.reg)}));
-function findAc(d,q){
-  const w=compact(q),used=new Map();
-  // aircraft you've logged most often come first when nothing is typed
-  for(const e of live(S.entries)) used.set(e.aircraftId,(used.get(e.aircraftId)||0)+1);
-  let hits=w?d.items.filter(it=>q.toLowerCase().split(/\s+/).map(compact).filter(Boolean).every(x=>it.hay.includes(x))):d.items.slice();
-  hits.sort((x,y)=>(w?(x.r.startsWith(w)?0:x.r.includes(w)?1:2)-(y.r.startsWith(w)?0:y.r.includes(w)?1:2):0)||(used.get(y.a.id)||0)-(used.get(x.a.id)||0)||x.a.reg.localeCompare(y.a.reg));
-  hits=hits.slice(0,8);
-  // offer to add it only once it looks like a whole reg, or nothing matches at all
-  if(q&&!d.items.some(it=>it.r===w)&&(!hits.length||w.length>=5)) hits.push({add:true,reg:q.toUpperCase()});
-  return hits;
-}
-const ataItems=()=>ATA.map(([code,name])=>({code,name,hay:compact(code+' '+name)}));
-function findAta(d,q){
-  let w=compact(q);
-  if(/^\d{3,}$/.test(w)) w=w.slice(0,2);   // 2122 -> 21
-  if(!w){const used=new Set(live(S.entries).map(e=>e.ata));return d.items.filter(it=>used.has(it.code)).slice(0,10);}
-  const words=q.toLowerCase().split(/\s+/).map(compact).filter(Boolean).map(x=>/^\d{3,}$/.test(x)?x.slice(0,2):x);
-  return d.items.filter(it=>words.every(x=>it.hay.includes(x)))
-    .sort((x,y)=>(x.code.startsWith(w)?0:compact(x.name).startsWith(w)?1:2)-(y.code.startsWith(w)?0:compact(y.name).startsWith(w)?1:2)).slice(0,10);
-}
-attachSuggest($('fAcText'),{local:acItems,source:'your aircraft',find:findAc,minLen:1,onFocus:true,
-  row:it=>it.add?`<b>Add new aircraft ${esc(it.reg)}</b><small>Not in your list yet</small>`:`<b class="mono">${esc(it.a.reg)}</b><small>${esc(typeLabel(it.a))}</small>`,
-  pick:it=>{
-    if(it.add){editAircraft(null,id=>{fillAcSelect(id);setAc(id);},{reg:it.reg});return;}
-    setAc(it.a.id);
-  }});
-attachSuggest($('fAtaText'),{local:ataItems,source:'the ATA list',find:findAta,minLen:1,onFocus:true,
-  row:it=>`<b>${it.code} – ${esc(it.name)}</b>`,pick:it=>setAta(it.code)});
-// typing an exact reg or chapter and moving on picks it without tapping the list
-function resolveAcText(){
-  const t=compact($('fAcText').value);
-  if(!t){if($('fAc').value){$('fAc').value='';syncAcText();updateFit();}return;}
-  const cur=acById($('fAc').value);if(cur&&compact(cur.reg)===t) return;
-  // "ZM506", "G-CJIY" or "ZM506 / G-CJIY" all find the same aircraft
-  const m=live(S.aircraft).filter(a=>compact(a.reg)===t||a.reg.split(/\s*[\/,]\s*|\s+/).map(compact).includes(t));
-  if(m.length===1) setAc(m[0].id);
-  else{$('fAc').value='';$('acHint').innerHTML='<span style="color:var(--danger)">Not in your aircraft list. Pick "Add new aircraft" from the list.</span>';updateFit();}
-}
-function resolveAtaText(){
-  const raw=$('fAtaText').value.trim();
-  if(!raw){if($('fAta').value){$('fAta').value='';onFormInput();}return;}
-  const m=raw.match(/^\d+/);let c=m?m[0].slice(0,2):'';
-  if(c.length===1) c='0'+c;
-  if(c&&ATA_NAME[c]){if(c!==$('fAta').value) setAta(c); else syncAtaText();return;}
-  const byName=ATA.filter(([,n])=>compact(n)===compact(raw));
-  if(byName.length===1){setAta(byName[0][0]);return;}
-  $('fAta').value='';onFormInput();
-}
-$('fAcText').addEventListener('blur',()=>setTimeout(resolveAcText,150));
-$('fAtaText').addEventListener('blur',()=>setTimeout(resolveAtaText,150));
-$('fAcText').addEventListener('input',()=>{$('acHint').textContent='';});
-
 function fillAcSelect(sel){
   const list=live(S.aircraft).sort((a,b)=>a.reg.localeCompare(b.reg));
-  $('fAc').innerHTML=`<option value="">Select aircraft…</option>`+list.map(a=>`<option value="${a.id}">${esc(a.reg)}  ${esc(typeLabel(a))}</option>`).join('')+`<option value="__new">Add new aircraft…</option>`;
+  $('fAc').innerHTML=`<option value="">Select aircraft…</option>`+list.map(a=>`<option value="${a.id}">${esc(a.reg)} · ${esc(typeLabel(a))}</option>`).join('')+`<option value="__new">＋ Add new aircraft…</option>`;
   if(sel!==undefined) $('fAc').value=sel;
-  syncAcText();
 }
 function fillAtaSelect(){
   $('fAta').innerHTML=`<option value="">Select ATA chapter…</option>`+ATA.map(([c,n])=>`<option value="${c}">${c} – ${esc(n)}</option>`).join('');
@@ -1040,8 +676,8 @@ function fillSupList(){
 }
 let lastAc='';
 $('fAc').addEventListener('change',()=>{
-  if($('fAc').value==='__new'){fillAcSelect(lastAc);editAircraft(null,id=>{fillAcSelect(id);lastAc=id;saveDraft();updateFit();});}
-  else{lastAc=$('fAc').value;updateFit();}
+  if($('fAc').value==='__new'){fillAcSelect(lastAc);editAircraft(null,id=>{fillAcSelect(id);lastAc=id;saveDraft();});}
+  else lastAc=$('fAc').value;
 });
 $('fDatePick').addEventListener('change',()=>{const v=$('fDatePick').value;if(v){$('fDate').value=fmtD(v);onDateInput();}});
 $('fDate').addEventListener('input',onDateInput);
@@ -1049,71 +685,45 @@ $('fDate').addEventListener('blur',()=>{const iso=parseD($('fDate').value);if(is
 function onDateInput(){
   const iso=parseD($('fDate').value),h=$('dateHint');
   if(!$('fDate').value.trim()){h.textContent='';return;}
-  if(!iso){h.innerHTML='<span style="color:var(--danger)">Not a valid date. Try 21OCT26 or 21/10/2026.</span>';return;}
+  if(!iso){h.innerHTML='<span style="color:var(--danger)">Not a valid date — try 21OCT26 or 21/10/2026</span>';return;}
   if(iso>todayISO()){h.innerHTML='<span style="color:var(--danger)">That date is in the future</span>';return;}
   $('fDatePick').value=iso;
   h.textContent=new Date(iso+'T12:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
   saveDraft();
 }
 function formEntry(){
-  return {purpose,acts:ACTS.map(a=>a[0]).filter(c=>acts.has(c)),date:parseD($('fDate').value),aircraftId:$('fAc').value,ata:$('fAta').value,
+  return {acts:ACTS.map(a=>a[0]).filter(c=>acts.has(c)),date:parseD($('fDate').value),aircraftId:$('fAc').value,ata:$('fAta').value,
     job:$('fJob').value.trim(),task:$('fTask').value.trim(),reason:$('fReason').value.trim(),manual:$('fManual').value.trim(),
-    tooling:$('fTooling').value.trim(),challenges:$('fChal').value.trim(),result:$('fResult').value.trim(),supName:$('fSup').value.trim()};
-}
-/* Where would this entry land? Rows already used on the last page of its type+ATA, or null if unknown. */
-function pageSpace(e){
-  if(!e.aircraftId||e.aircraftId==='__new'||!e.ata) return null;
-  const key=groupKey(e);
-  const pages=groupPages(live(S.entries).filter(x=>x.id!==editingId&&groupKey(x)===key));
-  const last=pages[pages.length-1];
-  return {used:last?last.used:0,n:last?last.n:1,of:pages.length,ata:e.ata,type:typeLabel(acById(e.aircraftId))};
-}
-function updateDup(e){
-  const box=$('dupBox');
-  const hits=e.ata&&e.task?live(S.entries).filter(x=>x.id!==editingId&&x.ata===e.ata&&sameTask(x.task,e.task)):[];
-  box.hidden=!hits.length;
-  if(!hits.length) return;
-  box.innerHTML=`<b>Already logged in ATA ${e.ata}</b>${hits.slice(0,3).map(x=>`<div class="mono">${fmtD(x.date)} ${esc(acById(x.aircraftId)?.reg||'')}</div><div>${esc(x.task)}</div>`).join('')}
-    <div class="sub">CAP 741 only needs each task once. A different component, test or fault on this system adds more to your logbook.</div>`;
+    tooling:$('fTooling').value.trim(),challenges:$('fChal').value.trim(),result:$('fResult').value.trim(),supName:$('fSup').value.trim(),
+    fault:$('fFault').value.trim(),rect:$('fRect').value.trim(),parts:$('fParts').value.trim(),notes:$('fNotes').value.trim(),role,
+    hours:$('fHours').value===''?'':Math.max(0,+$('fHours').value||0),log:MODE};
 }
 async function updateFit(){
-  updateDup(formEntry());
   const box=$('fitBox');
   if(!MF){box.textContent='Checking fit…';await measureFonts();}
   const e=formEntry(),segs=taskSegs(e);
-  if(!segs.length){box.className='fit';box.innerHTML='<div class="msg"><b>Task detail box</b></div><div class="sub">Start typing and this shows how many rows of the page the entry will use.</div>';return;}
-  const L=entryLayout(e),sp=pageSpace(e);
-  let used=sp?sp.used:0,newPage=false;
-  if(sp&&used+L.k>ROWS_PER_PAGE){newPage=used>0;used=0;}
-  const cells=Array.from({length:ROWS_PER_PAGE},(_,i)=>`<i class="${i<used?'used':i<used+L.k?'this':''}"></i>`).join('');
-  let msg,sub,cls;
-  if(!L.ok){
-    const chars=segs.reduce((n,s)=>n+s.t.length,0),over=Math.ceil(chars*(1-L.cap/L.total));
-    cls='bad';msg='Too long for a whole page';sub=`Trim about ${over} characters. Anything past five rows is cut off.`;
-  }else if(L.k===1){
-    cls='ok';msg='Fits in one row';sub=`${L.size}pt text, ${L.lines.length} of ${L.per} lines.`;
+  if(!segs.length){box.className='fit';box.innerHTML='Task detail box: empty';return;}
+  const r=fit(segs,TASK_W,TASK_H,MF);
+  const used=Math.min(1,r.lines.length/r.maxLines);
+  if(r.ok){
+    box.className='fit ok';
+    box.innerHTML=`✓ Fits the Task Detail box (${r.size}pt, ${r.lines.length} of ${r.maxLines} lines)<div class="fitbar"><i style="width:${Math.round(used*100)}%"></i></div>`;
   }else{
-    cls='spill';msg=`Spills into ${L.k} rows`;
-    sub=`The rows below get ${contMark()==='"'?'ditto marks (")':'a dash (–)'} in the activity, date, reg and job card columns. The supervisor signs in the last row.`;
+    const chars=segs.reduce((n,s)=>n+s.t.length,0);
+    const over=Math.ceil(chars*(1-r.maxLines/r.lines.length));
+    box.className='fit bad';
+    box.innerHTML=`✗ Too long for the box — trim about ${over} characters<div class="fitbar"><i style="width:100%"></i></div>`;
   }
-  let where='';
-  if(sp){
-    const free=ROWS_PER_PAGE-used-Math.min(L.k,ROWS_PER_PAGE);
-    where=newPage?`<div class="sub">Not enough room left on ${esc(sp.type)} ATA ${sp.ata} page ${sp.n}, so this starts page ${sp.n+1}.</div>`
-      :`<div class="sub">${esc(sp.type)} ATA ${sp.ata} page ${sp.n}: ${free===0?'this fills the page.':`${free} ${free===1?'row':'rows'} left after this entry.`}</div>`;
-  }
-  box.className='fit '+cls;
-  box.innerHTML=`<div class="msg"><b>${msg}</b></div><div class="meter" aria-hidden="true">${cells}</div><div class="sub">${sub}</div>${where}`;
 }
 let fitT;
 function onFormInput(){clearTimeout(fitT);fitT=setTimeout(updateFit,120);saveDraft();}
-['fTask','fReason','fManual','fTooling','fChal','fResult','fJob','fSup','fAta'].forEach(id=>$(id).addEventListener('input',onFormInput));
+['fTask','fReason','fManual','fTooling','fChal','fResult','fJob','fSup','fAta','fFault','fRect','fParts','fNotes','fHours'].forEach(id=>$(id).addEventListener('input',onFormInput));
 $('fAta').addEventListener('change',onFormInput);
 $('fSup').addEventListener('input',()=>{
   const n=$('fSup').value.trim().toLowerCase();
   const s=live(S.supervisors).find(x=>x.name.toLowerCase()===n);
   $('supHint').textContent=!n?'Their licence number goes on the signature sheet, not on the entry.':
-    s?`${s.cat||'Licence cat. not set'}, ${s.licNo||'licence no. not set'}`:'New name. They will be added to your supervisor list when you save.';
+    s?`${s.cat||'Licence cat. not set'} · ${s.licNo||'licence no. not set'}`:'New name — will be added to your supervisor list when you save.';
 });
 
 let draftT;
@@ -1121,134 +731,84 @@ function saveDraft(){if(editingId)return;clearTimeout(draftT);draftT=setTimeout(
 
 function setForm(e,{keepDate=false}={}){
   acts=new Set(e.acts||[]);renderActs();
-  purpose=e.purpose||'';renderPurpose();
   if(!keepDate) $('fDate').value=e.date?fmtD(e.date):(e.dateText||fmtD(todayISO()));
   fillAcSelect(e.aircraftId||'');lastAc=e.aircraftId||'';
-  $('fAta').value=e.ata||'';syncAtaText();
+  $('fAta').value=e.ata||'';
   $('fJob').value=e.job||'';$('fTask').value=e.task||'';$('fReason').value=e.reason||'';$('fManual').value=e.manual||'';
   $('fTooling').value=e.tooling||'';$('fChal').value=e.challenges||'';$('fResult').value=e.result||'';
+  $('fFault').value=e.fault||'';$('fRect').value=e.rect||'';$('fParts').value=e.parts||'';$('fNotes').value=e.notes||'';
+  $('fHours').value=e.hours??'';role=e.role||'';renderRole();
   $('fSup').value=e.supName!==undefined?e.supName:(supById(e.supervisorId)?.name||'');
   $('fSup').dispatchEvent(new Event('input'));
   onDateInput();updateFit();
 }
 function newEntry(prefill){
-  editingId=null;$('formTitle').textContent='New entry';$('editBtns').style.display='none';$('btnSave').textContent='Save entry';
+  editingId=null;updateTitles();$('editBtns').style.display='none';$('btnSave').textContent='Save entry';
   setForm(prefill||{});
 }
 function editEntry(id){
   const e=S.entries.find(x=>x.id===id);if(!e)return;
-  editingId=id;$('formTitle').textContent='Edit entry';$('editBtns').style.display='flex';$('btnSave').textContent='Save changes';
-  show('log');setForm(e);
+  editingId=id;setMode(logOf(e));$('editBtns').style.display='flex';$('btnSave').textContent='Save changes';
+  show('log');setForm(e);updateTitles();
 }
 $('btnCancel').onclick=()=>{newEntry();show('book');};
-$('btnDup').onclick=()=>{const e=S.entries.find(x=>x.id===editingId);newEntry({...e,date:todayISO(),job:''});toast('Copied. Change what you need and save.');};
+$('btnDup').onclick=()=>{const e=S.entries.find(x=>x.id===editingId);newEntry({...e,date:todayISO(),job:''});toast('Copied — change what you need and save');};
 $('btnDel').onclick=async()=>{if(!confirm('Delete this entry?'))return;tombstone(S.entries,editingId);await save();newEntry();toast('Entry deleted');show('book');};
 
-let savingEntry=false;
 $('btnSave').onclick=async()=>{
-  if(savingEntry) return;
-  resolveAcText();resolveAtaText();            // ignore a double tap while the first save is still writing
   const f=formEntry(),errs=[];
-  if(!f.acts.length) errs.push('activity type');
+  if(MODE==='exp'&&!f.acts.length) errs.push('activity type');
   if(!f.date) errs.push('a valid date');
   else if(f.date>todayISO()) errs.push('a date that isn\'t in the future');
   if(!f.aircraftId||f.aircraftId==='__new') errs.push('aircraft');
-  if(!f.ata) errs.push('ATA chapter');
+  if(MODE==='exp'&&!f.ata) errs.push('ATA chapter');
   if(!f.task) errs.push('task description');
   if(errs.length){toast('Please add: '+errs.join(', '),3500);return;}
   let supId='',newSup=false;
-  if(f.supName&&f.purpose!=='certification'){
+  if(MODE==='exp'&&f.supName){
     let s=live(S.supervisors).find(x=>x.name.toLowerCase()===f.supName.toLowerCase());
-    if(!s){s={id:uid(),name:f.supName,cat:'',licNo:'',mro:''};upsert(S.supervisors,s);newSup=true;toast(`${f.supName} added to supervisors. Add their licence details later.`,3500);}
+    if(!s){s={id:uid(),name:f.supName,cat:'',licNo:'',mro:''};upsert(S.supervisors,s);newSup=true;toast(`${f.supName} added to supervisors — add their licence details later`,3500);}
     supId=s.id;
   }
-  const fullBefore=new Set(groupPages(live(S.entries)).filter(p=>p.full).map(pageSig));
   const old=editingId?S.entries.find(x=>x.id===editingId):null;
-  const e={id:editingId||uid(),createdAt:old?.createdAt||now(),purpose:f.purpose,acts:f.acts,date:f.date,aircraftId:f.aircraftId,ata:f.ata,job:f.job,task:f.task,
-    reason:f.reason,manual:f.manual,tooling:f.tooling,challenges:f.challenges,result:f.result,supervisorId:supId};
-  const wasEditing=!!editingId;
-  savingEntry=true;$('btnSave').disabled=true;
-  try{upsert(S.entries,e);await save();}
-  catch(err){alert('Could not save: '+err.message);return;}
-  finally{savingEntry=false;$('btnSave').disabled=false;}
+  const e={id:editingId||uid(),createdAt:old?.createdAt||now(),acts:f.acts,date:f.date,aircraftId:f.aircraftId,ata:f.ata,job:f.job,task:f.task,
+    reason:f.reason,manual:f.manual,tooling:f.tooling,challenges:f.challenges,result:f.result,
+    supervisorId:MODE==='exp'?supId:(old?.supervisorId||''),log:MODE,fault:f.fault,rect:f.rect,parts:f.parts,notes:f.notes,role:f.role,hours:f.hours};
+  upsert(S.entries,e);
+  await save();
   fillSupList();
-  const filled=groupPages(live(S.entries)).filter(p=>p.full&&p.key===groupKey(e)&&!fullBefore.has(pageSig(p)));
-  if(wasEditing){toast('Entry updated');newEntry();show('book');}
-  else{
-    clearTimeout(draftT);await idb.del('draft');
-    const total=live(S.entries).length;
-    if(f.purpose==='certification') toast(`Certified entry saved, ${total} in your logbook`);
-    else if(!f.supName) toast(`Saved, ${total} in your logbook. No supervisor yet, so add one before printing.`,3500);
-    else if(!newSup) toast(`Entry saved, ${total} in your logbook`);
-    // start a completely fresh entry: every box cleared, date back to today
-    newEntry();window.scrollTo(0,0);
-  }
-  if(filled.length&&askPrintOn()) askToPrint(filled);
+  if(editingId){toast('Entry updated');newEntry();show('book');return;}
+  await idb.del('draft');
+  if(MODE==='cur') toast('Saved to work log'); else if(!f.supName) toast('Saved — no supervisor yet, add one before printing',3500); else if(!newSup) toast('Entry saved');
+  // keep date, aircraft, ATA and supervisor for the next task on the same job
+  newEntry({date:f.date,aircraftId:f.aircraftId,ata:f.ata,supName:f.supName,role:f.role});
 };
 
-/* ---------- page-full prompt ---------- */
-function askToPrint(pages){
-  const p=pages[0],more=pages.length-1;
-  openModal('Page full',`
-    <p>${esc(p.type)}, ATA ${p.ata}, page ${p.n} has no rows left${more?` (plus ${more} more page${more>1?'s':''} for this type and chapter)`:''}.</p>
-    <p>Print it now so you and your supervisor can sign it while the work is fresh?</p>
-    <label class="check"><input type="checkbox" id="pkSig"> Include supervisor signature sheet</label>
-    <div class="btns"><button class="btn" id="pkGo" type="button">Download ${pages.length>1?'pages':'page'}</button><button class="btn sec" id="pkNo" type="button">Not now</button></div>
-    <button class="link" id="pkNever" type="button">Stop asking (turn back on in Settings)</button>`,
-  ()=>{
-    $('pkGo').onclick=async()=>{await exportPages(pages,$('pkSig').checked,$('pkGo'));closeModal();};
-    $('pkNo').onclick=closeModal;
-    $('pkNever').onclick=async()=>{await setSetting('askPrint',false);closeModal();toast('You won\'t be asked again. Pages can still be downloaded from the Logbook.',3500);};
-  });
-}
-
 /* ---------- AIRCRAFT ---------- */
-/* Aircraft grouped by the type printed on the page, one folding section per type.
-   Which sections are closed is remembered on this device only. */
-const acClosed=(()=>{try{return new Set(JSON.parse(localStorage.getItem('acClosed')||'[]'));}catch(e){return new Set();}})();
 function renderAc(){
-  const list=live(S.aircraft),entries=live(S.entries);
-  if(!list.length){$('acList').innerHTML=`<div class="empty">No aircraft yet. Add the first one you've worked on.</div>`;return;}
-  const count=id=>entries.filter(e=>e.aircraftId===id).length;
-  const groups=new Map();
-  for(const a of list){const t=typeLabel(a);if(!groups.has(t))groups.set(t,[]);groups.get(t).push(a);}
-  $('acList').innerHTML=[...groups.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([type,acs])=>{
-    acs.sort((a,b)=>a.reg.localeCompare(b.reg));
-    const n=acs.reduce((t,a)=>t+count(a.id),0);
-    return `<details class="acgrp" data-type="${esc(type)}"${acClosed.has(type)?'':' open'}>
-      <summary><span class="ty">${esc(type)}</span><span class="cnt">${acs.length} aircraft, ${n} ${n===1?'entry':'entries'}</span></summary>
-      <div class="list">${acs.map(a=>{const k=count(a.id);
-        return `<div class="item" data-id="${a.id}"><div class="main"><div class="t mono">${esc(a.reg)}</div><div class="s">${esc([a.model,a.serial?'s/n '+a.serial:''].filter(Boolean).join(', ')||a.make||'')}</div></div><span class="hint" style="margin:0">${k} ${k===1?'entry':'entries'}</span></div>`;}).join('')}</div>
-    </details>`;
-  }).join('');
-  $('acList').querySelectorAll('details').forEach(d=>d.addEventListener('toggle',()=>{
-    d.open?acClosed.delete(d.dataset.type):acClosed.add(d.dataset.type);
-    try{localStorage.setItem('acClosed',JSON.stringify([...acClosed]));}catch(e){}
-  }));
+  const list=live(S.aircraft).sort((a,b)=>a.reg.localeCompare(b.reg));
+  $('acList').innerHTML=list.length?list.map(a=>{
+    const n=live(S.entries).filter(e=>e.aircraftId===a.id).length;
+    return `<div class="item" data-id="${a.id}"><div class="main"><div class="t mono">${esc(a.reg)}</div><div class="s">${esc(typeLabel(a))}${a.serial?' · s/n '+esc(a.serial):''}</div></div><span class="pn hint" style="margin:0">${n} ${n===1?'entry':'entries'}</span></div>`;
+  }).join(''):`<div class="empty">No aircraft yet.</div>`;
 }
 $('acList').addEventListener('click',e=>{const it=e.target.closest('.item');if(it)editAircraft(it.dataset.id);});
 $('btnAddAc').onclick=()=>editAircraft(null);
-function editAircraft(id,after,pre={}){
-  const a=id?acById(id):{reg:pre.reg||'',make:'',model:'',engine:'',serial:'',typeOverride:''};
+function editAircraft(id,after){
+  const a=id?acById(id):{reg:'',make:'',model:'',engine:'',serial:'',typeOverride:''};
   openModal(id?'Edit aircraft':'New aircraft',`
     <label>Registration</label><input id="aReg" class="mono" autocapitalize="characters" value="${esc(a.reg)}" placeholder="G-ABCD">
     <div class="row"><div><label>Make</label><input id="aMake" value="${esc(a.make)}" placeholder="Leonardo"></div>
     <div><label>Model</label><input id="aModel" value="${esc(a.model)}" placeholder="AW139"></div></div>
-    <div class="hint">Type a model, such as AW139 or S-92, to pick it from the UK Part-66 type rating list. That fills in the make, engine and type for you.</div>
     <label>Engine</label><input id="aEng" value="${esc(a.engine)}" placeholder="PWC PT6C-67C">
     <label>Serial number</label><input id="aSer" class="mono" value="${esc(a.serial)}">
-    <label>Type as printed <span class="opt">(Part-66 type rating endorsement)</span></label>
+    <label>Type as printed <span class="opt">(optional — match the UK Part 66 rating list)</span></label>
     <input id="aType" value="${esc(a.typeOverride)}" placeholder="">
     <div class="hint">Pages are grouped by this type: <b id="aPrev"></b></div>
     <div class="btns"><button class="btn" id="aSave" type="button">Save aircraft</button>${id?'<button class="btn danger" id="aDel" type="button">Delete</button>':''}</div>`,
   ()=>{
     const prev=()=>{$('aType').placeholder=typeLabel({make:$('aMake').value,model:$('aModel').value,engine:$('aEng').value,reg:$('aReg').value});$('aPrev').textContent=$('aType').value||$('aType').placeholder||'—';};
     ['aMake','aModel','aEng','aType','aReg'].forEach(i=>$(i).addEventListener('input',prev));prev();
-    attachSuggest($('aModel'),{list:'part66-types',find:findTypes,
-      row:it=>`<b>${esc(it.model)}${it.desig?' ('+esc(it.desig)+')':''}</b><small>${esc(it.rating)}, ${esc(titleish(it.make))}</small>`,
-      pick:it=>{$('aModel').value=it.model;$('aMake').value=titleish(it.make);$('aEng').value=engineOf(it.rating);$('aType').value=it.rating;prev();}});
-    attachSuggest($('aType'),{list:'part66-types',find:findRatings,row:it=>`<b>${esc(it.rating)}</b>`,
-      pick:it=>{$('aType').value=it.rating;if(!$('aEng').value)$('aEng').value=engineOf(it.rating);prev();}});
     $('aSave').onclick=async()=>{
       const reg=$('aReg').value.trim().toUpperCase();
       if(!reg){toast('Registration is required');return;}
@@ -1259,7 +819,7 @@ function editAircraft(id,after,pre={}){
     };
     if(id) $('aDel').onclick=async()=>{
       const n=live(S.entries).filter(e=>e.aircraftId===id).length;
-      if(n){toast(`Can't delete: ${n} entries use this aircraft`,3500);return;}
+      if(n){toast(`Can't delete — ${n} entries use this aircraft`,3500);return;}
       if(!confirm('Delete '+a.reg+'?'))return;tombstone(S.aircraft,id);await save();closeModal();renderAc();fillAcSelect('');
     };
   });
@@ -1269,7 +829,7 @@ function editAircraft(id,after,pre={}){
 const supMissing=s=>!s.licNo||!s.cat||!s.mro;
 function renderSups(){
   const list=live(S.supervisors).sort((a,b)=>a.name.localeCompare(b.name));
-  $('supListView').innerHTML=list.length?list.map(s=>`<div class="item" data-id="${s.id}"><div class="main"><div class="t">${esc(s.name)}</div><div class="s">${esc([s.cat,s.licNo,s.mro].filter(Boolean).join(', ')||'No licence details yet')}</div></div>${supMissing(s)?'<span class="badge">Details needed</span>':''}</div>`).join(''):`<div class="empty">No supervisors yet. Names you type on an entry are added here automatically.</div>`;
+  $('supListView').innerHTML=list.length?list.map(s=>`<div class="item" data-id="${s.id}"><div class="main"><div class="t">${esc(s.name)}</div><div class="s">${esc([s.cat,s.licNo,s.mro].filter(Boolean).join(' · ')||'No licence details yet')}</div></div>${supMissing(s)?'<span class="badge">Details needed</span>':''}</div>`).join(''):`<div class="empty">No supervisors yet. Names you type on an entry are added here automatically.</div>`;
 }
 $('supListView').addEventListener('click',e=>{const it=e.target.closest('.item');if(it)editSup(it.dataset.id);});
 $('btnAddSup').onclick=()=>editSup(null);
@@ -1279,13 +839,10 @@ function editSup(id){
     <label>Name</label><input id="pName" autocapitalize="words" value="${esc(s.name)}">
     <div class="row"><div><label>Licence type / cat.</label><input id="pCat" value="${esc(s.cat)}" placeholder="B1.3"></div>
     <div><label>Licence number</label><input id="pLic" class="mono" value="${esc(s.licNo)}" autocapitalize="characters"></div></div>
-    <label>MRO &amp; approval number</label><input id="pMro" value="${esc(s.mro)}" placeholder="Type a company, town or UK.145 number">
-    <div class="hint">Pick from the CAA list of UK Part 145 organisations, or type your own. These go on the signature sheet. Their signature and stamp are added in ink.</div>
+    <label>MRO &amp; approval number</label><input id="pMro" value="${esc(s.mro)}" placeholder="e.g. Company name UK.145.XXXXX">
+    <div class="hint">These go on the signature sheet. Their signature and stamp are added in ink.</div>
     <div class="btns"><button class="btn" id="pSave" type="button">Save</button>${id?'<button class="btn danger" id="pDel" type="button">Delete</button>':''}</div>`,
   ()=>{
-    attachSuggest($('pMro'),{list:'part145-orgs',find:findOrgs,
-      row:it=>`<b>${esc(it.name)}</b><small>${esc(it.ref)}${it.town?', '+esc(it.town):''}</small>`,
-      pick:it=>{$('pMro').value=`${it.name} ${it.ref}`;}});
     $('pSave').onclick=async()=>{
       const name=$('pName').value.trim();if(!name){toast('Name is required');return;}
       if(live(S.supervisors).some(x=>x.name.toLowerCase()===name.toLowerCase()&&x.id!==id)){toast(name+' already exists');return;}
@@ -1294,240 +851,143 @@ function editSup(id){
     };
     if(id) $('pDel').onclick=async()=>{
       const n=live(S.entries).filter(e=>e.supervisorId===id).length;
-      if(n){toast(`Can't delete: ${n} entries are signed by ${s.name}`,3500);return;}
+      if(n){toast(`Can't delete — ${n} entries are signed by ${s.name}`,3500);return;}
       if(!confirm('Delete '+s.name+'?'))return;tombstone(S.supervisors,id);await save();closeModal();renderSups();fillSupList();
     };
   });
 }
 
 /* ---------- LOGBOOK ---------- */
-let bookPages=[];
-/* Entries whose aircraft can't print properly: no aircraft at all (or one that was deleted / never synced),
-   or an aircraft with no type to go at the top of the page. */
-const acProblem=e=>{const a=acById(e.aircraftId);return !a||a.deleted?'none':(!a.typeOverride&&!a.make&&!a.model)?'type':'';};
-let onlyAcProblems=false;   // "Show just these" from the warning
 function filteredEntries(){
-  if(onlyAcProblems) return live(S.entries).filter(acProblem);
   const ty=$('xType').value,at=$('xAta').value;
-  const pu=$('xPurpose').value;
-  return live(S.entries).filter(e=>(!ty||typeLabel(acById(e.aircraftId))===ty)&&(!at||e.ata===at)&&(!pu||(pu==='none'?!e.purpose:e.purpose===pu)));
+  return live(S.entries).filter(e=>logOf(e)===MODE&&(!ty||typeLabel(acById(e.aircraftId))===ty)&&(!at||e.ata===at));
 }
-function sheetHtml(P,pi){
-  const mark=esc(contMark());
-  const rows=[];
-  P.items.forEach(({e,L})=>{
-    const ac=acById(e.aircraftId),s=supById(e.supervisorId);
-    for(let j=0;j<L.k;j++){
-      const txt=esc(linesText(rowLines(L,j)));
-      const supLine=j<L.k-1?'':isCert(e)?`<div class="m">Certified: ${esc(S.settings.ownerName||'you')}</div>`:`<div class="m${s?'':' warn'}">${s?esc(s.name):'No supervisor'}</div>`;
-      rows.push(j===0
-        ?`<div class="slot" data-id="${e.id}"><div class="l"><b>${fmtD(e.date)}</b>${esc(ac?.reg||'')}<div class="ac">${esc((e.acts||[]).join(', '))}</div>${e.purpose?`<span class="pt ${e.purpose}">${PURPOSE[e.purpose]}</span>`:''}</div>
-           <div><div class="x">${txt}</div>${supLine}</div></div>`
-        :`<div class="slot cont" data-id="${e.id}"><div class="l">${mark}</div><div><div class="x">${txt}</div>${supLine}</div></div>`);
-    }
-  });
-  while(rows.length<ROWS_PER_PAGE) rows.push(`<div class="slot blank"><div class="l"></div><div></div></div>`);
-  const free=ROWS_PER_PAGE-P.used;
-  return `<article class="sheet">
-    <div class="sh"><div class="ty">${esc(P.type)}</div><div class="at">ATA <b>${P.ata}</b> ${esc(ATA_NAME[P.ata]||'')}</div>
-      <div class="pn">Page ${P.n} of ${P.of}${P.full?'<br><span class="full">Full</span>':''}</div></div>
-    ${rows.join('')}
-    <div class="sf"><span>${free?`${free} of ${ROWS_PER_PAGE} rows free`:'All five rows used'}</span><button class="btn sec" type="button" data-page="${pi}">Download page</button></div>
-  </article>`;
-}
-/* ---------- ATA coverage (whole logbook, not the filters) ---------- */
-// Licences being applied for (several allowed). Main-system chapters weigh 3x in the readiness score.
-const WEIGHT = {main:3,other:1};
-const licences=()=>{const l=(S.settings.licences||[S.settings.licence]).filter(k=>LICENCES[k]);return l.length?l:['B1.3'];};
-function readiness(k,by){
-  const lic=LICENCES[k];let got=0,max=0;
-  for(const tier of ['main','other']) for(const c of lic[tier]){
-    const n=by.get(c)?.tasks.size||0;max+=WEIGHT[tier];got+=WEIGHT[tier]*Math.min(1,n/TARGETS[tier][0]);
-  }
-  return {pct:Math.round(got/max*100),empty:lic.main.filter(c=>!by.has(c)).length};
-}
-function coverageStats(){
-  const by=new Map();
-  for(const e of live(S.entries)){
-    if(!by.has(e.ata)) by.set(e.ata,{n:0,list:[],acts:new Set(),tasks:{size:0}});
-    const c=by.get(e.ata);c.n++;(e.acts||[]).forEach(a=>c.acts.add(a));
-    if(!c.list.some(t=>sameTask(t,e.task))){c.list.push(e.task);c.tasks.size++;}
-  }
-  for(const c of by.values()) c.routine=![...c.acts].some(a=>VARIED.has(a));
-  return by;
-}
-function renderCoverage(){
-  const sel=licences(),by=coverageStats();
-  // merge the selected licences: a chapter is "main" if any of them treats it as a main system
-  const lic={main:[],other:[]},needs={};
-  for(const k of sel) for(const tier of ['main','other']) for(const c of LICENCES[k][tier]){
-    (needs[c]=needs[c]||[]);if(tier==='main')needs[c].push(k);
-    if(!lic.main.includes(c)&&!lic.other.includes(c)) lic[tier].push(c);
-    else if(tier==='main'&&lic.other.includes(c)){lic.other.splice(lic.other.indexOf(c),1);lic.main.push(c);}
-  }
-  lic.main.sort((a,b)=>+a- +b);lic.other.sort((a,b)=>+a- +b);
-  const tile=(c,tier)=>{
-    const s=by.get(c),n=s?s.tasks.size:0,[lo,hi]=tier?TARGETS[tier]:[1,1];
-    const lvl=!n?'none':n<lo?'low':n<hi?'ok':'full';
-    const reps=s?s.n-n:0;
-    return `<button type="button" class="cv ${lvl}" data-ata="${c}" title="${n} distinct ${n===1?'task':'tasks'}${reps?`, ${reps} repeated`:''}${s&&s.routine?'. Only routine tasks so far: add a removal/installation, functional test or troubleshooting task':''}">
-      <span class="c">${c}</span><span class="ct">${n}${tier?`<small>/${lo}</small>`:''}</span>
-      <span class="nm">${esc(ATA_NAME[c]||'')}</span>${sel.length>1&&tier==='main'?`<span class="for">Main for ${esc(needs[c].join(', '))}</span>`:''}${s?`<span class="ac">${esc(ACTS.map(a=>a[0]).filter(a=>s.acts.has(a)).join(' '))}</span>`:''}
-      ${s&&s.routine?'<span class="flag">Routine only</span>':reps?`<span class="flag">${reps} repeat${reps>1?'s':''}</span>`:''}
-      <i style="--p:${Math.min(100,Math.round(n/lo*100))}%"></i></button>`;
-  };
-  const listed=new Set([...lic.main,...lic.other]);
-  const extra=[...by.keys()].filter(c=>!listed.has(c)).sort((a,b)=>+a- +b);
-  const scores=sel.map(k=>({k,...readiness(k,by)}));
-  $('covSum').textContent=scores.map(r=>`${r.k} ${r.pct}%`).join(', ')+(scores.some(r=>r.empty)?`. ${lic.main.filter(c=>!by.has(c)).length} main systems still empty.`:'');
-  $('covBody').innerHTML=`
-    <label style="margin-top:0">Applying for <span class="opt">(tap all that apply)</span></label>
-    <div class="chips" id="covLic">${Object.entries(LICENCES).map(([k,v])=>`<button type="button" class="chip mini${sel.includes(k)?' on':''}" data-k="${k}" aria-pressed="${sel.includes(k)}" title="${esc(v.label)}">${k}</button>`).join('')}</div>
-    <div class="hint">${esc(sel.map(k=>LICENCES[k].label).join(' + '))}</div>
-    <div class="ready">${scores.map(r=>`<div class="rd"><b>${r.k}</b><div class="rbar"><i style="width:${r.pct}%"></i></div><span>${r.pct}%</span></div>`).join('')}</div>
-    <div class="hint">Readiness is weighted: main systems count ${WEIGHT.main} times as much as other systems, and each chapter only counts up to its target.</div>
-    <h4>Main systems <small>aim for ${TARGETS.main.join('–')} varied tasks each</small></h4>
-    <div class="cvgrid">${lic.main.map(c=>tile(c,'main')).join('')}</div>
-    <h4>Other systems <small>aim for ${TARGETS.other.join('–')} each</small></h4>
-    <div class="cvgrid">${lic.other.map(c=>tile(c,'other')).join('')}</div>
-    ${extra.length?`<h4>Also logged</h4><div class="cvgrid">${extra.map(c=>tile(c,null)).join('')}</div>`:''}
-    <div class="cvkey"><span class="k0">None yet</span><span class="k1">Below target</span><span class="k2">On target</span><span class="k3">Top of range</span></div>
-    <div class="hint" style="margin-top:12px">The CAA sets no minimum per chapter. It looks for a broad spread across your licence category, and an empty main system often leads to questions. Counts are distinct tasks: logging the same task again doesn't add to them. Within each chapter, mix removal/installation, functional tests and troubleshooting. The codes on each tile show which you have. Tap a chapter to see its pages, or to start an entry if it's empty.</div>`;
-  $('covLic').onclick=async e=>{
-    const b=e.target.closest('[data-k]');if(!b)return;
-    const k=b.dataset.k,next=sel.includes(k)?sel.filter(x=>x!==k):[...sel,k];
-    if(!next.length){toast('Pick at least one licence');return;}
-    await setSetting('licences',Object.keys(LICENCES).filter(x=>next.includes(x)));renderCoverage();renderExperience();
-  };
-}
-$('covBody').addEventListener('click',e=>{
-  const t=e.target.closest('.cv');if(!t)return;
-  const c=t.dataset.ata;
-  if(t.classList.contains('none')){if(editingId)newEntry();show('log');setAta(c);toast(`ATA ${c} set on a new entry`);return;}
-  $('xType').value='';$('xAta').value=c;renderBook();$('bookList').scrollIntoView({behavior:'smooth'});
-});
-try{if(localStorage.getItem('covClosed')==='1')$('covBox').open=false;}catch(e){}
-$('covBox').addEventListener('toggle',()=>{try{localStorage.setItem('covClosed',$('covBox').open?'0':'1');}catch(e){}});
-
-/* ---------- experience time (66.A.30 basic experience) ---------- */
-const isoAddYears=(iso,y)=>{const [a,b,c]=iso.split('-').map(Number);const d=new Date(Date.UTC(a+y,b-1,c));return d.toISOString().slice(0,10);};
-function monthsBetween(a,b){
-  const [y1,m1,d1]=a.split('-').map(Number),[y2,m2,d2]=b.split('-').map(Number);
-  return Math.max(0,(y2-y1)*12+(m2-m1)-(d2<d1?1:0));
-}
-const ym=m=>`${Math.floor(m/12)?Math.floor(m/12)+(Math.floor(m/12)===1?' year':' years'):''}${Math.floor(m/12)&&m%12?' ':''}${m%12||!m?m%12+(m%12===1?' month':' months'):''}`;
-const longDate=iso=>new Date(iso+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
-function renderExperience(){
-  const all=live(S.entries),first=all.map(e=>e.date).sort()[0];
-  const start=S.settings.expStart||first||'',route=S.settings.route||'none',ri=ROUTES.findIndex(r=>r[0]===route),today=todayISO();
-  const done=start?monthsBetween(start,today):0;
-  const rows=licences().map(k=>{
-    const yrs=EXP_YEARS[k][Math.max(0,ri)],due=start?isoAddYears(start,yrs):'',met=start&&due<=today;
-    const pct=start?Math.min(100,Math.round(done/(yrs*12)*100)):0;
-    return {k,yrs,due,met,pct};
-  });
-  // last 12 calendar months, oldest first: which had at least one entry
-  const now=new Date(),months=[];
-  for(let i=11;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);months.push({key:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'),lab:MONTHS[d.getMonth()][0]});}
-  const active=new Set(all.map(e=>e.date.slice(0,7)));
-  const recent=months.filter(m=>active.has(m.key)).length;
-  $('expSum').textContent=start?`${ym(done)} so far. `+rows.map(r=>`${r.k} ${r.met?'met':r.pct+'%'}`).join(', '):'Add an entry or a start date to begin counting';
-  $('expBody').innerHTML=`
-    <label style="margin-top:0" for="xpRoute">Your route to the licence</label>
-    <select id="xpRoute">${ROUTES.map(([v,l])=>`<option value="${v}"${v===route?' selected':''}>${esc(l)}</option>`).join('')}</select>
-    <label for="xpStart">Experience started</label><input type="date" id="xpStart" value="${start}" max="${today}">
-    <div class="hint">${S.settings.expStart?'Set by you.':first?`Taken from your first entry (${longDate(first)}). Set it earlier if you started maintenance work before you began logging.`:''}</div>
-    <div class="xp">${rows.map(r=>`<div class="r${r.met?' met':''}"><b>${r.k}</b><div class="rbar"><i style="width:${r.pct}%"></i></div>
-      <small>${!start?`${r.yrs} years needed`:r.met?`${r.yrs} years needed: met on ${longDate(r.due)}`:`${ym(done)} of ${r.yrs} years. Reached ${longDate(r.due)}`}</small></div>`).join('')}</div>
-    <label>Recent experience <span class="opt">(months with entries, last 12)</span></label>
-    <div class="months">${months.map(m=>`<i class="${active.has(m.key)?'on':''}" title="${m.key}">${m.lab}</i>`).join('')}</div>
-    <div class="hint">${recent} of the last 12 months have entries. At least one year of your experience must be recent work on the category you're applying for.</div>
-    <div class="hint" style="margin-top:12px">Basic experience under Part-66 66.A.30: B1.1, B1.3 and B2 need 5 years with no previous technical training, 3 years with relevant technical training, or 2 years after a Part-147 basic course. B1.2 and B1.4 need 3, 2 or 1 years. This counts calendar time from your start date. Check the CAA's current rules for your route before you apply.</div>`;
-  $('xpStart').onchange=async()=>{const v=$('xpStart').value;await setSetting('expStart',v&&v!==first?v:'');renderExperience();};
-  $('xpRoute').onchange=async()=>{await setSetting('route',$('xpRoute').value);renderExperience();};
-}
-try{if(localStorage.getItem('expClosed')==='1')$('expBox').open=false;}catch(e){}
-$('expBox').addEventListener('toggle',()=>{try{localStorage.setItem('expClosed',$('expBox').open?'0':'1');}catch(e){}});
-
 function renderBook(){
-  renderCoverage();renderExperience();
-  const all=live(S.entries);
+  const all=live(S.entries).filter(e=>logOf(e)===MODE);
   const types=[...new Set(all.map(e=>typeLabel(acById(e.aircraftId))))].sort();
   const atas=[...new Set(all.map(e=>e.ata))].sort((a,b)=>+a- +b);
   const tv=$('xType').value,av=$('xAta').value;
   $('xType').innerHTML='<option value="">All types</option>'+types.map(t=>`<option>${esc(t)}</option>`).join('');
   $('xAta').innerHTML='<option value="">All chapters</option>'+atas.map(a=>`<option value="${a}">${a} – ${esc(ATA_NAME[a]||'')}</option>`).join('');
   if(types.includes(tv))$('xType').value=tv; if(atas.includes(av))$('xAta').value=av;
+  if(MODE==='cur'){renderWorkLog(all);return;}
 
-  const es=filteredEntries(),pages=groupPages(es);bookPages=pages;
-  const sups=[...new Set(es.filter(e=>!isCert(e)).map(e=>e.supervisorId).filter(Boolean))].map(supById).filter(Boolean);
-  const noSup=es.filter(e=>!isCert(e)&&!e.supervisorId).length, badSup=sups.filter(supMissing);
-  const tooLong=es.filter(e=>!entryLayout(e).ok).length;
+  const es=filteredEntries(),pages=groupPages(es);
+  const sups=[...new Set(es.map(e=>e.supervisorId).filter(Boolean))].map(supById).filter(Boolean);
+  const noSup=es.filter(e=>!e.supervisorId).length, badSup=sups.filter(supMissing);
+  let tooLong=0;
+  if(MF) tooLong=es.filter(e=>!fit(taskSegs(e),TASK_W,TASK_H,MF).ok).length;
   const w=[];
   if(!S.settings.ownerName) w.push('Add your name in Settings so it prints on every page.');
   if(noSup) w.push(`${noSup} ${noSup===1?'entry has':'entries have'} no supervisor.`);
-  const certN=es.filter(isCert).length;
-  if(certN&&!S.settings.ownerLic) w.push(`${certN} certified ${certN===1?'job uses':'jobs use'} your details. Add your licence number in Settings so it prints.`);
-  if(badSup.length) w.push(`Licence details missing for ${badSup.map(s=>esc(s.name)).join(', ')}.`);
-  const cov=coverageStats(),routine=[...cov.entries()].filter(([,c])=>c.routine).map(([a])=>a).sort((a,b)=>+a- +b);
-  const reps=[...cov.values()].reduce((n,c)=>n+c.n-c.tasks.size,0);
-  if(reps) w.push(`${reps} ${reps===1?'entry repeats a task':'entries repeat tasks'} already logged in the same chapter. CAP 741 only needs each task once, so consider swapping ${reps===1?'it':'them'} for something different.`);
-  if(routine.length) w.push(`Only routine tasks so far in ATA ${routine.join(', ')}. Add a removal/installation, functional test or troubleshooting task to show depth.`);
-  if(tooLong) w.push(`${tooLong} task ${tooLong===1?'description is':'descriptions are'} longer than a whole page and will be cut off.`);
-  // aircraft problems are counted across the whole logbook, so the warning shows whatever the filters
-  const allProb=live(S.entries).filter(acProblem),noAc=allProb.filter(e=>acProblem(e)==='none').length;
-  const typeless=[...new Set(allProb.filter(e=>acProblem(e)==='type').map(e=>e.aircraftId))].map(acById);
-  if(onlyAcProblems&&!allProb.length){onlyAcProblems=false;toast('All entries now have aircraft details');return renderBook();}
-  let acw='';
-  if(allProb.length){
-    const parts=[];
-    if(noAc) parts.push(`${noAc} ${noAc===1?'entry has':'entries have'} no aircraft. Open ${noAc===1?'it':'each one'} and type the reg.`);
-    if(typeless.length) parts.push(`${allProb.length-noAc} ${allProb.length-noAc===1?'entry is':'entries are'} on aircraft with no type set: ${typeless.map(a=>`<button type="button" class="link inl" data-fixac="${a.id}">${esc(a.reg)}</button>`).join(', ')}. Tap a reg to add its type.`);
-    acw=`<div class="warnbox acw"><b>${allProb.length} ${allProb.length===1?'entry is':'entries are'} missing aircraft details.</b> ${parts.join(' ')}
-      <div class="btns" style="margin-top:8px">${onlyAcProblems?`<button type="button" class="btn sec small" data-acfilter="off">Show all entries</button>`:`<button type="button" class="btn small" data-acfilter="on">Show just these</button>`}</div></div>`;
-  }
-  // aircraft problems sit at the very top of the Logbook so they're seen before the coverage panel
-  $('xAlert').innerHTML=(onlyAcProblems?`<div class="filterbar">Showing only the ${allProb.length} ${allProb.length===1?'entry':'entries'} missing aircraft details. Tap one to fix it.</div>`:'')+acw;
-  $('covBox').hidden=onlyAcProblems;$('expBox').hidden=onlyAcProblems;
-  $('xWarn').innerHTML=onlyAcProblems?'':w.map(x=>`<div class="warnbox">${x}</div>`).join('');
-  const unset=es.filter(e=>!e.purpose).length;
-  $('xUnset').innerHTML=unset?`<div class="hint">${unset} ${unset===1?'entry here isn\'t':'entries here aren\'t'} marked as training or certification yet.</div>
-    <div class="btns" style="margin-top:8px"><button class="btn sec small" type="button" data-bulk="training">Mark as training</button><button class="btn sec small" type="button" data-bulk="certification">Mark as certification</button></div>`:'';
-  $('xSummary').textContent=es.length?`${es.length} ${es.length===1?'entry':'entries'} on ${pages.length} task ${pages.length===1?'page':'pages'}${$('xSig').checked?` plus ${Math.max(1,Math.ceil(sups.length/SIGS_PER_PAGE))} signature sheet`:''}, sorted by ATA chapter.`:'';
+  if(badSup.length) w.push(`Licence details missing for: ${badSup.map(s=>esc(s.name)).join(', ')}.`);
+  if(tooLong) w.push(`${tooLong} task ${tooLong===1?'description is':'descriptions are'} too long and will be cut off.`);
+  $('xWarn').innerHTML=w.map(x=>`<div class="warnbox">${x}</div>`).join('');
+  $('xSummary').textContent=es.length?`${es.length} ${es.length===1?'entry':'entries'} → ${pages.length} task ${pages.length===1?'page':'pages'}${$('xSig').checked?` + ${Math.max(1,Math.ceil(sups.length/SIGS_PER_PAGE))} signature sheet`:''}. Sorted by ATA chapter.`:'';
   $('btnExport').disabled=!es.length;
 
-  $('bookList').innerHTML=pages.length?pages.map(sheetHtml).join(''):`<div class="empty">${all.length?'No entries match these filters.':'No entries yet. Add your first one on the Entry tab.'}</div>`;
+  $('bookList').innerHTML=pages.length?pages.map(P=>`
+    <div class="page"><div class="ph"><span class="ata">ATA ${P.ata}</span><span class="ty">${esc(P.type)}</span><span class="pn">${P.of>1?`p${P.n}/${P.of}`:''}</span></div>
+    ${P.entries.map(e=>{const ac=acById(e.aircraftId),s=supById(e.supervisorId);return `
+      <div class="erow" data-id="${e.id}"><span class="d">${fmtD(e.date)}</span><span class="a">${esc((e.acts||[]).join(' · '))} &nbsp;<span style="color:var(--muted)">${esc(ac?.reg||'')}${e.job?' · '+esc(e.job):''}</span></span>
+      <div class="x">${esc(e.task)}</div><div class="m">${s?'Supervisor: '+esc(s.name):'<span style="color:var(--warn)">No supervisor</span>'}</div></div>`;}).join('')}
+    </div>`).join(''):`<div class="empty">${all.length?'No entries match these filters.':'No entries yet — add your first one on the Entry tab.'}</div>`;
 }
-$('xType').onchange=$('xAta').onchange=$('xSig').onchange=$('xPurpose').onchange=renderBook;
-$('xAlert').addEventListener('click',e=>{
-  const f=e.target.closest('[data-acfilter]');
-  if(f){onlyAcProblems=f.dataset.acfilter==='on';renderBook();$('bookList').scrollIntoView({behavior:'smooth'});return;}
-  const a=e.target.closest('[data-fixac]');
-  if(a) editAircraft(a.dataset.fixac,()=>renderBook());
-});
-$('xUnset').addEventListener('click',async e=>{
-  const b=e.target.closest('[data-bulk]');if(!b)return;
-  const list=filteredEntries().filter(x=>!x.purpose),p=b.dataset.bulk;
-  if(!confirm(`Mark ${list.length} ${list.length===1?'entry':'entries'} as ${PURPOSE[p].toLowerCase()}?`))return;
-  for(const x of list) upsert(S.entries,{...x,purpose:p});
-  await save();renderBook();toast(`${list.length} marked as ${PURPOSE[p].toLowerCase()}`);
-});
-$('bookList').addEventListener('click',e=>{
-  const b=e.target.closest('[data-page]');
-  if(b){exportPages([bookPages[+b.dataset.page]],$('xSig').checked,b);return;}
-  const r=e.target.closest('.slot[data-id]');if(r)editEntry(r.dataset.id);
-});
-$('btnExport').onclick=()=>exportPages(groupPages(filteredEntries()),$('xSig').checked,$('btnExport'));
+$('xType').onchange=$('xAta').onchange=$('xSig').onchange=renderBook;
+
+/* ---------- WORK LOG (post-licence record) ---------- */
+function isoMinusYears(n){const d=new Date();d.setFullYear(d.getFullYear()-n);return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);}
+function renderCurStats(){
+  const cut=isoMinusYears(2),rec=live(S.entries).filter(e=>e.date>=cut);
+  const days=new Set(rec.map(e=>e.date)).size,months=new Set(rec.map(e=>e.date.slice(0,7))).size;
+  const hrs=rec.reduce((n,e)=>n+(+e.hours||0),0);
+  const by=new Map();
+  for(const e of rec){const t=typeLabel(acById(e.aircraftId));if(!by.has(t))by.set(t,{d:new Set(),last:''});const o=by.get(t);o.d.add(e.date);if(e.date>o.last)o.last=e.date;}
+  const rows=[...by.entries()].sort((a,b)=>b[1].last.localeCompare(a[1].last));
+  $('curStats').innerHTML=`<div style="font-weight:700">Last 2 years <span class="hint" style="font-weight:400">· since ${fmtD(cut)} · both logs</span></div>
+    <div class="stat"><div><b>${days}</b><span>days worked</span></div><div><b>${months}</b><span>months active</span></div><div><b>${hrs?+hrs.toFixed(1):'–'}</b><span>hours logged</span></div></div>
+    ${rows.length?`<table class="mini"><tr><th>Aircraft type</th><th style="text-align:right">Days</th><th style="text-align:right">Last</th></tr>${rows.map(([t,o])=>`<tr><td>${esc(t)}</td><td class="n">${o.d.size}</td><td class="n">${fmtD(o.last)}</td></tr>`).join('')}</table>`:''}
+    <div class="hint">Part-66 66.A.20(b)(2): licence privileges need 6 months of relevant maintenance experience in the last 2 years.</div>`;
+}
+function renderWorkLog(all){
+  renderCurStats();
+  const es=filteredEntries().sort((a,b)=>b.date.localeCompare(a.date)||(b.createdAt||0)-(a.createdAt||0));
+  $('cSummary').textContent=es.length?`${es.length} ${es.length===1?'entry':'entries'}, newest first.`:'';
+  $('btnCsv').disabled=!es.length;
+  const groups=new Map();
+  for(const e of es){const k=e.date.slice(0,7);if(!groups.has(k))groups.set(k,[]);groups.get(k).push(e);}
+  $('bookList').innerHTML=es.length?[...groups.entries()].map(([k,list])=>`
+    <div class="page"><div class="ph"><span class="ata">${MONTHS[+k.slice(5)-1]} ${k.slice(0,4)}</span><span class="ty"></span><span class="pn">${list.length} ${list.length===1?'entry':'entries'}</span></div>
+    ${list.map(e=>{const ac=acById(e.aircraftId);return `
+      <div class="erow" data-id="${e.id}"><span class="d">${fmtD(e.date)}</span><span class="a">${esc([...(e.acts||[]),e.role].filter(Boolean).join(' · '))} &nbsp;<span style="color:var(--muted)">${esc(ac?.reg||'')}${e.ata?' · ATA '+e.ata:''}${e.job?' · '+esc(e.job):''}</span></span>
+      <div class="x">${esc(e.task)}</div>${e.fault||e.rect?`<div class="m">${esc([e.fault&&'Fault: '+e.fault,e.rect&&'Fix: '+e.rect].filter(Boolean).join(' → '))}</div>`:''}</div>`;}).join('')}
+    </div>`).join(''):`<div class="empty">${all.length?'No entries match these filters.':'No work log entries yet — switch to Work log on the Entry tab and add one.'}</div>`;
+}
+function toCsv(rows){return rows.map(r=>r.map(v=>{v=String(v??'');return /[",\r\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}).join(',')).join('\r\n');}
+$('btnCsv').onclick=async()=>{
+  const es=filteredEntries().sort((a,b)=>a.date.localeCompare(b.date));
+  const rows=[['Date','Reg','Aircraft type','ATA','Job card','Activity','Role','Hours','Task','Fault / defect','Rectification','Parts','Manual ref','Tooling','Notes']];
+  for(const e of es){const ac=acById(e.aircraftId);rows.push([fmtD(e.date),ac?.reg,typeLabel(ac),e.ata?ataLabel(e.ata):'',e.job,(e.acts||[]).join(' '),e.role,e.hours,e.task,e.fault,e.rect,e.parts,e.manual,e.tooling,e.notes]);}
+  const bytes=new TextEncoder().encode('\ufeff'+toCsv(rows));
+  await deliver(bytes,`work-log-${fmtD(todayISO())}.csv`,'text/csv');
+};
+
+/* ---------- SEARCH ---------- */
+const SFIELDS=[['task','Task'],['fault','Fault'],['rect','Fix'],['parts','Parts'],['reason','Reason'],['result','Result'],['challenges','Challenges'],['notes','Notes'],['manual','Ref'],['tooling','Tooling'],['job','Job']];
+let qLog='all',qT;
+const reEsc=t=>t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+function haystack(e){const ac=acById(e.aircraftId);return [...SFIELDS.map(f=>e[f[0]]),ac?.reg,typeLabel(ac),e.ata,ATA_NAME[e.ata],(e.acts||[]).join(' '),e.role,supById(e.supervisorId)?.name,fmtD(e.date)].filter(Boolean).join('\n').toLowerCase();}
+function hl(text,terms){
+  if(!terms.length) return esc(text);
+  const parts=String(text).split(new RegExp('('+terms.map(reEsc).join('|')+')','gi'));
+  return parts.map((p,i)=>i%2?'<mark>'+esc(p)+'</mark>':esc(p)).join('');
+}
+function around(text,terms,len=150){
+  text=String(text);if(text.length<=len) return text;
+  const low=text.toLowerCase(),hits=terms.map(t=>low.indexOf(t)).filter(i=>i>=0),i=hits.length?Math.min(...hits):0;
+  const st=Math.max(0,i-50);return (st?'…':'')+text.slice(st,st+len)+(st+len<text.length?'…':'');
+}
+function renderSearch(){
+  const all=live(S.entries);
+  const types=[...new Set(all.map(e=>typeLabel(acById(e.aircraftId))))].sort();
+  const atas=[...new Set(all.map(e=>e.ata).filter(Boolean))].sort((a,b)=>+a- +b);
+  const tv=$('qType').value,av=$('qAta').value;
+  $('qType').innerHTML='<option value="">All types</option>'+types.map(t=>`<option>${esc(t)}</option>`).join('');
+  $('qAta').innerHTML='<option value="">All chapters</option>'+atas.map(a=>`<option value="${a}">${a} – ${esc(ATA_NAME[a]||'')}</option>`).join('');
+  if(types.includes(tv))$('qType').value=tv; if(atas.includes(av))$('qAta').value=av;
+  const ty=$('qType').value,at=$('qAta').value;
+  const terms=$('qText').value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  let es=all.filter(e=>(qLog==='all'||logOf(e)===qLog)&&(!ty||typeLabel(acById(e.aircraftId))===ty)&&(!at||e.ata===at));
+  if(terms.length) es=es.filter(e=>{const h=haystack(e);return terms.every(t=>h.includes(t));});
+  es.sort((a,b)=>b.date.localeCompare(a.date)||(b.createdAt||0)-(a.createdAt||0));
+  const LIMIT=100;
+  $('qCount').textContent=!all.length?'':`${es.length} ${es.length===1?'match':'matches'}${es.length>LIMIT?` — showing newest ${LIMIT}`:''}`;
+  $('qResults').innerHTML=es.slice(0,LIMIT).map(e=>{
+    const ac=acById(e.aircraftId),lg=logOf(e);
+    let snips=SFIELDS.filter(([k])=>e[k]&&(!terms.length?['task','fault','rect'].includes(k):terms.some(t=>String(e[k]).toLowerCase().includes(t))));
+    if(!snips.length) snips=[['task','Task']];
+    return `<div class="item sres" data-id="${e.id}">
+      <div class="top"><span class="tag ${lg}">${lg==='cur'?'WORK':'EXP'}</span><span class="d">${fmtD(e.date)}</span><span>${hl(ac?.reg||'',terms)}</span><span class="s2">${hl(typeLabel(ac),terms)}${e.ata?' · ATA '+e.ata:''}</span></div>
+      ${snips.slice(0,4).map(([k,l])=>`<div class="snip"><b>${l}</b> ${hl(around(e[k],terms),terms)}</div>`).join('')}
+    </div>`;}).join('')||`<div class="empty">${all.length?'Nothing found — try fewer or shorter words.':'No entries yet.'}</div>`;
+}
+$('qText').addEventListener('input',()=>{clearTimeout(qT);qT=setTimeout(renderSearch,150);});
+$('qType').onchange=$('qAta').onchange=renderSearch;
+$('qLog').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;qLog=b.dataset.l;document.querySelectorAll('#qLog .chip').forEach(c=>c.classList.toggle('on',c===b));renderSearch();});
+$('qResults').addEventListener('click',e=>{const r=e.target.closest('.sres');if(r)editEntry(r.dataset.id);});
+$('bookList').addEventListener('click',e=>{const r=e.target.closest('.erow');if(r)editEntry(r.dataset.id);});
+$('btnExport').onclick=async()=>{
+  const b=$('btnExport');b.disabled=true;b.textContent='Building PDF…';
+  try{
+    const bytes=await buildPdf(filteredEntries(),$('xSig').checked);
+    const who=(S.settings.ownerName||'logbook').replace(/[^A-Za-z0-9]+/g,'-');
+    await deliver(bytes,`CAP741-S3.1-${who}-${fmtD(todayISO())}.pdf`);
+  }catch(err){console.error(err);alert('PDF export failed: '+err.message);}
+  b.disabled=false;b.textContent='Export PDF';
+};
 
 /* ---------- SETTINGS ---------- */
-$('sOwner').addEventListener('change',async()=>{await setSetting('ownerName',$('sOwner').value.trim());toast('Saved');});
-[['sOwnerCat','ownerCat'],['sOwnerLic','ownerLic'],['sOwnerMro','ownerMro']].forEach(([id,k])=>$(id).addEventListener('change',async()=>{
-  let v=$(id).value.trim();if(k==='ownerLic')v=v.toUpperCase();await setSetting(k,v);updateCertNote();toast('Saved');}));
-attachSuggest($('sOwnerMro'),{list:'part145-orgs',find:findOrgs,
-  row:it=>`<b>${esc(it.name)}</b><small>${esc(it.ref)}${it.town?', '+esc(it.town):''}</small>`,
-  pick:async it=>{$('sOwnerMro').value=`${it.name} ${it.ref}`;await setSetting('ownerMro',$('sOwnerMro').value);toast('Saved');}});
-$('sAskPrint').addEventListener('change',async()=>{await setSetting('askPrint',$('sAskPrint').checked);toast('Saved');});
-$('sMark').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;await setSetting('contMark',b.dataset.m);renderSettings();updateFit();});
+$('sOwner').addEventListener('change',async()=>{S.settings={...S.settings,ownerName:$('sOwner').value.trim(),updatedAt:now()};await save();toast('Saved');});
 $('btnBackup').onclick=async()=>{
   const bytes=new TextEncoder().encode(JSON.stringify(S,null,1));
   await deliver(bytes,`cap741-backup-${fmtD(todayISO())}.json`,'application/json');
@@ -1536,7 +996,7 @@ $('btnImport').onclick=()=>$('importFile').click();
 $('importFile').onchange=async e=>{
   const f=e.target.files[0];if(!f)return;
   try{const d=JSON.parse(await f.text());if(!d||!Array.isArray(d.entries))throw new Error('Not a CAP 741 Log backup');
-    const before=live(S.entries).length;S=merge(S,d);upgradeActs();await save();refreshAll();toast(`Imported ${live(S.entries).length-before} new entries`,3500);}
+    const before=live(S.entries).length;S=merge(S,d);await save();refreshAll();toast(`Imported — ${live(S.entries).length-before} new entries`,3500);}
   catch(err){alert('Import failed: '+err.message);}
   e.target.value='';
 };
@@ -1558,9 +1018,6 @@ $('btnTplReset').onclick=async()=>{await idb.del('template');renderSettings();to
 
 async function renderSettings(){
   $('sOwner').value=S.settings.ownerName||'';
-  $('sOwnerCat').value=S.settings.ownerCat||'';$('sOwnerLic').value=S.settings.ownerLic||'';$('sOwnerMro').value=S.settings.ownerMro||'';
-  $('sAskPrint').checked=askPrintOn();
-  document.querySelectorAll('#sMark button').forEach(b=>b.classList.toggle('on',b.dataset.m===contMark()));
   const t=await idb.get('template');
   $('tplStatus').textContent=t?`Using ${t.name} (task page ${t.taskPage}, signature page ${t.sigPage}).`:'Using the built-in CAP 741 Issue 4 Section 3.1 pages.';
   renderDbx();
@@ -1570,24 +1027,14 @@ async function renderSettings(){
 const appKey=()=>DEV.appKey||DROPBOX_APP_KEY;
 const b64url=buf=>btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 async function saveDev(){await idb.set('device',DEV);}
-
-function dbxGuide(){
-  // Steps 1–4 happen on dropbox.com; mark them done once a key has been pasted, then track the connect/allow steps.
-  const st=i=>{const hasKey=!!appKey();if(i<=4)return hasKey?'done':'';if(i===5)return DEV.opened?'done':hasKey?'now':'';return DEV.opened?'now':'';};
-  return `<details class="guide"${DEV.opened?'':' open'}>
-    <summary>Set up Dropbox step by step</summary>
-    <ol class="steps">
-      <li class="${st(1)}"><b>Open the Dropbox App Console</b>Go to <a href="https://www.dropbox.com/developers/apps" target="_blank" rel="noopener">dropbox.com/developers/apps</a> and sign in with your normal Dropbox account. On iPhone the page is easier to use with Safari's <i>Request Desktop Website</i> (the <i>aA</i> button).</li>
-      <li class="${st(2)}"><b>Create an app</b>Tap <i>Create app</i>. Choose <i>Scoped access</i>, then <i>App folder</i>, and give it a name nobody else will have used, such as "CAP741 Log" followed by your initials. Tap <i>Create app</i>.</li>
-      <li class="${st(3)}"><b>Turn on file permissions</b>Open the <i>Permissions</i> tab, tick these two, then tap <i>Submit</i> at the bottom of the page. Do this before connecting, or sync won't be allowed to save.
-        <div class="copy"><button type="button" data-copy="files.content.write">files.content.write</button><button type="button" data-copy="files.content.read">files.content.read</button></div></li>
-      <li class="${st(4)}"><b>Copy the App key</b>Back on the <i>Settings</i> tab, copy the <i>App key</i>. Don't use the App secret, and leave the redirect URIs empty.</li>
-      <li class="${st(5)}"><b>Paste the key below and tap Connect Dropbox</b>Dropbox opens in a new tab.</li>
-      <li class="${st(6)}"><b>Allow, then paste the code</b>Tap <i>Allow</i>. Dropbox shows a code: copy it, come back to this tab, paste it into the box that appears below and tap <i>Finish connecting</i>.</li>
-    </ol>
-    <div class="hint" style="padding:0 14px 14px;margin:0">Your logbook is saved as <code>Apps/&lt;app name&gt;/cap741-log.json</code>. To sync another device, connect it the same way with the same App key. If you change permissions later, disconnect and connect again.</div>
-  </details>`;
+let pkce=null; // prepared ahead of the Connect tap
+async function makePkce(){
+  if(!(window.crypto&&crypto.subtle)) throw new Error('needs HTTPS (open via the github.io address)');
+  const v=b64url(crypto.getRandomValues(new Uint8Array(48)));
+  const c=b64url(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(v)));
+  pkce={v,c};
 }
+
 function renderDbx(){
   const c=$('dbxCard');
   if(DEV.refresh){
@@ -1598,47 +1045,37 @@ function renderDbx(){
     return;
   }
   c.innerHTML=`
-    <div class="hint" style="margin-top:0">Keeps this phone and your other devices in step through a private folder in your Dropbox. It works offline, and changes sync when you have signal. Setting it up takes about five minutes.</div>
-    ${dbxGuide()}
-    <label>Dropbox App key</label><input id="dKey" class="mono" value="${esc(appKey())}" placeholder="Paste from the Settings tab of your Dropbox app" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <div class="hint" style="margin-top:0">Keeps this phone and any other device in sync through a private folder in your Dropbox. Works offline — changes sync when you have signal.</div>
+    <label>Dropbox App key</label><input id="dKey" class="mono" value="${esc(appKey())}" placeholder="from dropbox.com/developers/apps" autocapitalize="off" autocorrect="off" spellcheck="false">
     <div class="btns"><a class="btn" id="dGo" href="#" target="_blank" rel="noopener">Connect Dropbox</a></div>
-    <div id="dStep2" style="display:${DEV.opened?'block':'none'}">
-      <label>Code from Dropbox</label><input id="dCode" class="mono" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Paste the code shown after you tap Allow">
+    <div id="dStep2" style="display:${DEV.verifier?'block':'none'}">
+      <ol class="steps"><li>Dropbox opens in Safari — log in if asked, then tap <b>Allow</b>.</li><li>Copy the access code it shows you.</li><li>Switch back to this app and paste it below.</li></ol>
+      <label>Code from Dropbox</label><input id="dCode" class="mono" autocapitalize="off" autocorrect="off" spellcheck="false">
       <div class="btns"><button class="btn" id="dFinish" type="button">Finish connecting</button></div>
     </div>`;
-  c.querySelectorAll('[data-copy]').forEach(b=>b.onclick=async()=>{
-    try{await navigator.clipboard.writeText(b.dataset.copy);b.classList.add('done');toast('Copied '+b.dataset.copy);}catch(e){toast('Copy failed. Type it in instead.');}
-  });
-  /* The Dropbox link is built before it's tapped. iPhone Safari blocks any new tab that isn't
-     opened straight from a tap, so the secure code can't be worked out after the tap. */
-  let prepT;
-  const prepLink=async()=>{
-    const a=$('dGo'),key=$('dKey').value.trim();
-    if(!key){a.setAttribute('href','#');return;}
-    if(key!==DEV.appKey||!DEV.verifier){DEV.appKey=key;DEV.verifier=b64url(crypto.getRandomValues(new Uint8Array(48)));await saveDev();}
-    const ch=b64url(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(DEV.verifier)));
-    a.href=`https://www.dropbox.com/oauth2/authorize?client_id=${encodeURIComponent(key)}&response_type=code&code_challenge=${ch}&code_challenge_method=S256&token_access_type=offline`;
+  // Build the Dropbox link BEFORE the tap: iPhone Safari blocks pages opened after async work.
+  const setHref=()=>{
+    const key=$('dKey').value.trim();
+    $('dGo').href=(key&&pkce)?`https://www.dropbox.com/oauth2/authorize?client_id=${encodeURIComponent(key)}&response_type=code&code_challenge=${pkce.c}&code_challenge_method=S256&token_access_type=offline`:'#';
   };
-  $('dKey').addEventListener('input',()=>{clearTimeout(prepT);$('dGo').setAttribute('href','#');prepT=setTimeout(prepLink,300);});
-  prepLink();
+  $('dKey').addEventListener('input',setHref);
+  (pkce?Promise.resolve():makePkce()).then(setHref).catch(err=>alert('This browser cannot set up Dropbox sign-in: '+err.message));
   $('dGo').onclick=e=>{
-    if($('dGo').getAttribute('href')==='#'){
-      e.preventDefault();
-      if(!$('dKey').value.trim()){toast('Paste your Dropbox App key first. Steps 1 to 4 show where to find it.',3500);c.querySelector('.guide').open=true;}
-      else toast('One moment, then tap Connect Dropbox again');
-      return;
-    }
-    $('dStep2').style.display='block';   // let the tap open Dropbox; don't redraw under it
-    DEV.opened=true;saveDev();
+    const key=$('dKey').value.trim();
+    if(!key){e.preventDefault();toast('Paste your Dropbox App key first');return;}
+    if(!pkce){e.preventDefault();toast('One moment — try again');return;}
+    setHref();                          // link opens normally (no preventDefault)
+    DEV.appKey=key;DEV.verifier=pkce.v;saveDev();
+    $('dStep2').style.display='block';
   };
   if($('dFinish')) $('dFinish').onclick=async()=>{
     const code=$('dCode').value.trim();if(!code){toast('Paste the code from Dropbox');return;}
     try{
       const r=await fetch('https://api.dropboxapi.com/oauth2/token',{method:'POST',body:new URLSearchParams({code,grant_type:'authorization_code',code_verifier:DEV.verifier,client_id:appKey()})});
       const j=await r.json();if(!r.ok)throw new Error(j.error_description||j.error||r.status);
-      DEV.refresh=j.refresh_token;DEV.access=j.access_token;DEV.exp=now()+(j.expires_in-60)*1000;delete DEV.verifier;delete DEV.opened;await saveDev();
+      DEV.refresh=j.refresh_token;DEV.access=j.access_token;DEV.exp=now()+(j.expires_in-60)*1000;delete DEV.verifier;pkce=null;await saveDev();
       toast('Dropbox connected');renderDbx();sync(true);
-    }catch(err){alert('Dropbox connection failed: '+err.message+'\nCheck step 3 (permissions), then tap Connect Dropbox again.');}
+    }catch(err){alert('Dropbox connection failed: '+err.message+'\nStart again with Connect Dropbox.');}
   };
 }
 async function token(){
@@ -1648,10 +1085,10 @@ async function token(){
   DEV.access=j.access_token;DEV.exp=now()+(j.expires_in-60)*1000;await saveDev();return DEV.access;
 }
 let syncing=false,syncAgain=false,syncT;
-function scheduleSync(){if(!DEV.refresh){setPill();return;}setPill('Saved, syncing…','warn');clearTimeout(syncT);syncT=setTimeout(sync,2500);}
+function scheduleSync(){if(!DEV.refresh){setPill();return;}setPill('Saved · syncing…','warn');clearTimeout(syncT);syncT=setTimeout(sync,2500);}
 async function sync(manual){
   if(!DEV.refresh){setPill();return;}
-  if(!navigator.onLine){setPill('Offline, saved on phone','warn');return;}
+  if(!navigator.onLine){setPill('Offline · saved on phone','warn');return;}
   if(syncing){syncAgain=true;return;}
   syncing=true;setPill('Syncing…','warn');
   try{
@@ -1661,7 +1098,6 @@ async function sync(manual){
     if(d.ok) remote=await d.json(); else if(d.status!==409) throw new Error('Download failed ('+d.status+')');
     const before=JSON.stringify(S);
     if(remote) S=merge(S,remote);
-    upgradeActs();
     await idb.set('state',S);
     const u=await fetch('https://content.dropboxapi.com/2/files/upload',{method:'POST',headers:{Authorization:'Bearer '+t,'Content-Type':'application/octet-stream','Dropbox-API-Arg':JSON.stringify({path:DBX_PATH,mode:'overwrite',mute:true})},body:JSON.stringify(S)});
     if(!u.ok) throw new Error('Upload failed ('+u.status+')');
@@ -1669,7 +1105,7 @@ async function sync(manual){
     if(JSON.stringify(S)!==before) refreshAll(true);
     setPill('Synced '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}),'ok');
     if(manual) toast('Synced with Dropbox');
-  }catch(err){console.warn(err);setPill('Sync failed, saved on phone','warn');if(manual)toast('Sync failed: '+err.message,4000);}
+  }catch(err){console.warn(err);setPill('Sync failed · saved on phone','warn');if(manual)toast('Sync failed: '+err.message,4000);}
   syncing=false;if(syncAgain){syncAgain=false;sync();}
   if(document.querySelector('#view-set.on')) renderDbx();
 }
@@ -1679,34 +1115,6 @@ function setPill(txt,cls){
   p.textContent=txt;p.className='pill '+cls;
 }
 $('syncPill').onclick=()=>DEV.refresh?sync(true):show('set');
-
-/* ---------- help / contact ----------
-   A static site can't send mail itself, so the form opens the person's email app with the
-   message already written and addressed; they just tap Send. */
-const HELP_EMAIL='ma77c@proton.me';
-const helpMailto=(topic,body)=>`mailto:${HELP_EMAIL}?subject=${encodeURIComponent('CAP 741 Log: '+topic)}&body=${encodeURIComponent(body)}`;
-$('helpBtn').onclick=()=>openModal('Help and contact',`
-  <p>Got a question, found a problem or have an idea? Send it here and it comes straight to me.</p>
-  <label for="hTopic">What's it about?</label>
-  <select id="hTopic"><option>A question</option><option>Something isn't working</option><option>An idea for the app</option><option>Dropbox sync</option><option>Printing / PDF</option></select>
-  <label for="hName">Your name <span class="opt">(optional)</span></label><input id="hName" autocapitalize="words" value="${esc(S.settings.ownerName||'')}">
-  <label for="hMsg">Message</label><textarea id="hMsg" rows="6" placeholder="Tell me as much as you can. If something's broken, what did you tap and what happened?"></textarea>
-  <label class="check"><input type="checkbox" id="hInfo" checked> Include app details (how many entries, Dropbox status, phone type) to help me look into it</label>
-  <div class="btns"><button class="btn" id="hSend" type="button">Write email</button></div>
-  <div class="hint">This opens your email app with the message ready to send to ${HELP_EMAIL}. Nothing is sent until you tap Send there.</div>`,
-()=>{
-  $('hSend').onclick=()=>{
-    const msg=$('hMsg').value.trim();if(!msg){toast('Add a message first');$('hMsg').focus();return;}
-    const topic=$('hTopic').value,name=$('hName').value.trim();
-    let body=msg+(name?`\n\n${name}`:'');
-    if($('hInfo').checked){
-      const sw=navigator.serviceWorker?.controller?'offline cache on':'offline cache off';
-      body+=`\n\n---\nCAP 741 Log details\nEntries: ${live(S.entries).length}, aircraft: ${live(S.aircraft).length}, supervisors: ${live(S.supervisors).length}\nDropbox: ${DEV.refresh?'connected':'not connected'}, ${sw}\nDevice: ${navigator.userAgent}`;
-    }
-    location.href=helpMailto(topic,body);
-    closeModal();toast('Opening your email app…');
-  };
-});
 window.addEventListener('online',()=>sync());
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')sync();});
 
@@ -1715,20 +1123,21 @@ function refreshAll(keepForm){
   fillSupList();
   if(!keepForm||!editingId) fillAcSelect($('fAc').value);
   const v=document.querySelector('.view.on').id.replace('view-','');
-  ({book:renderBook,ac:renderAc,sup:renderSups,set:renderSettings}[v]||(()=>{}))();
+  ({book:renderBook,search:renderSearch,ac:renderAc,sup:renderSups,set:renderSettings}[v]||(()=>{}))();
 }
 (async function boot(){
   S=(await idb.get('state'))||blank();
   DEV=(await idb.get('device'))||{};
-  if(upgradeActs()) await save();   // after DEV, since saving may start a sync
   if(navigator.storage&&navigator.storage.persist) navigator.storage.persist().catch(()=>{});
-  await measureFonts();   // page packing needs text widths, so load them before anything renders
   fillAtaSelect();fillSupList();
+  document.body.dataset.view='log';
   const draft=await idb.get('draft');
+  setMode((draft&&draft.log)||DEV.mode||'exp',{boot:true});
   newEntry(draft||undefined);
   setPill();
-  templateBytes().catch(()=>toast('PDF template missing. Check cap741-template.pdf is uploaded.',4000));
-  if(!S.settings.ownerName&&!live(S.entries).length) setTimeout(()=>{show('set');toast('Start by adding your name, or connect Dropbox below to bring in your logbook and settings.',5000);},300);
+  measureFonts().then(updateFit);
+  templateBytes().catch(()=>toast('PDF template missing — check cap741-template.pdf is uploaded',4000));
+  if(!S.settings.ownerName&&!live(S.entries).length) setTimeout(()=>{show('set');toast('Start by adding your name — it prints on every page',4000);},300);
   sync();
   if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 })();
