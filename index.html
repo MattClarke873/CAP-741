@@ -305,6 +305,27 @@ mark{background:#ffe08a;color:#1c2422;border-radius:3px;padding:0 1px}
 .sres .snip{font-size:14.5px;line-height:1.35}
 .sres .snip b{color:var(--muted);font:700 12px/1 var(--head);text-transform:uppercase;letter-spacing:.04em;margin-right:4px}
 nav button{font-size:12px}
+/* status lines: recency, expiry dates */
+.status{border-radius:10px;padding:10px 12px;margin:0 0 10px;font-size:14px;border:1.5px solid var(--line);background:var(--card)}
+.status b{display:block;font:700 17px/1.2 var(--head);margin-bottom:2px}
+.status.ok{border-color:var(--ok)}.status.ok b{color:var(--ok)}
+.status.warn{border-color:var(--warn);background:var(--warn-soft)}.status.warn b{color:var(--warn)}
+.status.bad{border-color:var(--danger)}.status.bad b{color:var(--danger)}
+.status ul{margin:4px 0 0;padding-left:18px}.status li{margin:2px 0}
+.exrow{display:grid;grid-template-columns:minmax(0,1fr) 40px;gap:6px;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.exrow [data-k=name]{grid-column:1/-1;font-weight:600}
+.exrow input{padding:9px 10px}
+.exrow .x-btn{height:40px}
+.exst{grid-column:1/-1;font-size:13px;margin-top:-2px}
+.exst.ok{color:var(--ok)}.exst.warn{color:var(--warn)}.exst.bad{color:var(--danger)}.exst.none{color:var(--muted)}
+.shiftlist{margin-top:12px;padding:10px 12px;border-radius:8px;background:var(--card);border:1.5px dashed var(--line);font-size:14px}
+.shiftlist b{display:block;font:700 16px/1.2 var(--head);margin-bottom:4px}
+.shiftlist ol{margin:0;padding-left:20px}
+.implist{max-height:46vh;overflow:auto;border:1px solid var(--line);border-radius:8px;margin-top:12px}
+.implist label{display:flex;gap:10px;align-items:flex-start;margin:0;padding:9px 10px;border-bottom:1px solid var(--line);font-weight:400;font-size:14px}
+.implist label:last-child{border-bottom:0}
+.implist input{width:20px;height:20px;flex:0 0 auto;-webkit-appearance:auto;appearance:auto;accent-color:var(--accent);margin-top:1px}
+.implist .mono{font-size:12.5px;color:var(--muted)}
 
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media (max-width:340px){.acts{grid-template-columns:repeat(2,1fr)}}
@@ -322,8 +343,13 @@ nav button{font-size:12px}
 <!-- ============ NEW / EDIT ENTRY ============ -->
 <section class="view on" id="view-log">
   <h2 id="formTitle">New entry</h2>
+  <div id="entryAlerts"></div>
 
-  <label style="margin-top:0">Activity type <span class="opt only-cur">(optional)</span></label>
+  <label for="fRepeat" style="margin-top:0">Repeat a past job <span class="opt">(optional)</span></label>
+  <input id="fRepeat" placeholder="Type part of a task, e.g. chip detector" spellcheck="false" autocapitalize="off">
+  <div class="hint">Fills in the task, ATA, activity and manual reference from a job you've logged before. You add the date, aircraft and job card.</div>
+
+  <label>Activity type <span class="opt only-cur">(optional)</span></label>
   <div class="chips acts" id="fActs"></div>
 
   <div class="only-exp">
@@ -351,6 +377,7 @@ nav button{font-size:12px}
 
   <label>Job card number</label>
   <input id="fJob" class="mono" autocomplete="off" autocapitalize="characters">
+  <label class="check"><input type="checkbox" id="fShift"> Shift mode: keep the date, aircraft and job card for the next task</label>
 
   <fieldset>
     <legend>Task detail</legend>
@@ -405,6 +432,7 @@ nav button{font-size:12px}
   <div class="btns">
     <button class="btn block" id="btnSave" type="button">Save entry</button>
   </div>
+  <div id="shiftList"></div>
   <div class="btns" id="editBtns" style="display:none">
     <button class="btn sec" id="btnDup" type="button">Duplicate</button>
     <button class="btn sec" id="btnCancel" type="button">Cancel</button>
@@ -453,6 +481,9 @@ nav button{font-size:12px}
     <div class="hint" id="wRangeHint">Leave a box blank to include everything at that end. Both downloads use these dates.</div>
     <div class="btns"><button class="btn" id="btnWorkPdf" type="button">Download PDF</button><button class="btn sec" id="btnCsv" type="button">Download CSV</button></div>
     <div class="hint" id="cSummary"></div>
+    <div class="btns"><button class="btn sec block" id="btnJobImport" type="button">Import a company job report</button></div>
+    <div class="hint">An Excel (.xlsx) or CSV report with Aircraft Registration, Description, Ata Chapter, Day Done and Work Order columns. You see every new job before anything is added, and jobs already in your log are skipped.</div>
+    <input type="file" id="jobFile" accept=".xlsx,.xls,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" hidden>
     </div>
   </div>
   <div id="bookList"></div>
@@ -501,6 +532,9 @@ nav button{font-size:12px}
     <label>Your MRO &amp; approval number</label><input id="sOwnerMro" placeholder="Type a company, town or UK.145 number">
     <div class="hint">Used when you mark a job as certification: your name, licence and stamp number go in the supervisor box, and you're added to the signature sheet. The Work log PDF prints them next to every job.</div>
   </div>
+
+  <h3>Licence and authorisations</h3>
+  <div class="card" id="expCard"></div>
 
   <h3>Pages and printing</h3>
   <div class="card">
@@ -984,7 +1018,7 @@ function show(v){
   document.body.dataset.view=v;
   document.querySelectorAll('.view').forEach(s=>s.classList.toggle('on',s.id==='view-'+v));
   document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
-  ({book:renderBook,search:renderSearch,ac:renderAc,sup:renderSups,set:renderSettings}[v]||(()=>{}))();
+  ({log:renderEntryAlerts,book:renderBook,search:renderSearch,ac:renderAc,sup:renderSups,set:renderSettings}[v]||(()=>{}))();
   window.scrollTo(0,0);
 }
 $('nav').addEventListener('click',e=>{
@@ -1004,7 +1038,7 @@ function setMode(m,{boot=false}={}){
   if(boot) return;
   DEV.mode=MODE;saveDev();
   if(document.body.dataset.view==='book') renderBook();
-  updateFit();saveDraft();
+  renderEntryAlerts();updateFit();saveDraft();
 }
 function updateTitles(){
   $('formTitle').textContent=(editingId?'Edit ':'New ')+(MODE==='cur'?'work log entry':'entry');
@@ -1216,6 +1250,7 @@ function updateDup(e){
     <div class="sub">CAP 741 only needs each task once. A different component, test or fault on this system adds more to your logbook.</div>`;
 }
 async function updateFit(){
+  updateShiftList();
   if(MODE==='cur'){$('dupBox').hidden=true;return;}   // no page rows or repeat checks in the work log
   updateDup(formEntry());
   const box=$('fitBox');
@@ -1314,7 +1349,7 @@ $('btnSave').onclick=async()=>{
   try{upsert(S.entries,e);await save();}
   catch(err){alert('Could not save: '+err.message);return;}
   finally{savingEntry=false;$('btnSave').disabled=false;}
-  fillSupList();
+  fillSupList();renderEntryAlerts();
   const filled=MODE==='exp'?groupPages(expEntries()).filter(p=>p.full&&p.key===groupKey(e)&&!fullBefore.has(pageSig(p))):[];
   if(wasEditing){toast('Entry updated');newEntry();show('book');}
   else{
@@ -1324,8 +1359,9 @@ $('btnSave').onclick=async()=>{
     else if(f.purpose==='certification') toast(`Certified entry saved, ${total} in your logbook`);
     else if(!f.supName) toast(`Saved, ${total} in your logbook. No supervisor yet, so add one before printing.`,3500);
     else if(!newSup) toast(`Entry saved, ${total} in your logbook`);
-    // start a completely fresh entry: every box cleared, date back to today
-    newEntry();window.scrollTo(0,0);
+    // shift mode keeps the date, aircraft and job card (and supervisor) for the next task; otherwise start completely fresh
+    if($('fShift').checked){newEntry({date:f.date,aircraftId:f.aircraftId,job:f.job,supName:f.supName,purpose:f.purpose});$('fTask').focus();}
+    else{newEntry();window.scrollTo(0,0);}
   }
   if(filled.length&&askPrintOn()) askToPrint(filled);
 };
@@ -1679,6 +1715,7 @@ function renderCurStats(){
     <div class="stat"><div><b>${days}</b><span>days worked</span></div><div><b>${months}</b><span>months active</span></div><div><b>${hrs?+hrs.toFixed(1):'–'}</b><span>hours logged</span></div></div>
     ${rows.length?`<table class="mini"><tr><th>Aircraft type</th><th class="n">Days</th><th class="n">Last</th></tr>${rows.map(([t,o])=>`<tr><td>${esc(t)}</td><td class="n">${o.d.size}</td><td class="n">${fmtD(o.last)}</td></tr>`).join('')}</table>`:''}
     <div class="hint">Part-66 66.A.20(b)(2): to use your licence privileges you need 6 months of relevant maintenance experience in the last 2 years.</div>`;
+  $('curStats').insertAdjacentHTML('afterbegin',expiryHtml(90)+recencyStatusHtml());
 }
 function renderWorkLog(all){
   renderCurStats();
@@ -1775,6 +1812,7 @@ async function buildWorkPdf(entries,range={}){
       const r=recencyStats(),bx=M,bw=W-M*2,top=y;
       const lines=[`Last 2 years (since ${fmtD(r.cut)}): ${r.days} days worked, ${r.months} months with work${r.hrs?`, ${+r.hrs.toFixed(1)} hours logged`:''}.`,
         r.types.length?'By type: '+r.types.map(t=>`${t.t} ${t.days} ${t.days===1?'day':'days'}, last ${fmtD(t.last)}`).join(';  '):'',
+        expiries().filter(x=>x.name&&x.date).length?'Licence and authorisations: '+expiries().filter(x=>x.name&&x.date).map(x=>`${x.name} ${daysTo(x.date)<0?'expired':'valid until'} ${fmtD(x.date)}`).join(';  '):'',
         'Part-66 66.A.20(b)(2): licence privileges need 6 months of relevant maintenance experience in the preceding 2 years. Counts include CAP 741 experience entries.'].filter(Boolean);
       const wrapped=lines.flatMap((l,i)=>layout(tokenize([{t:l,b:i===0}],F),8.5,bw-16,F));
       const bh=12+wrapped.length*10.5;
@@ -1826,6 +1864,215 @@ $('btnWorkPdf').onclick=async()=>{
     toast('PDF downloaded');
   }catch(err){console.error(err);alert('PDF download failed: '+err.message);}
   b.disabled=false;b.textContent=label;
+};
+
+
+/* ---------- LICENCE AND AUTHORISATION EXPIRY DATES (synced with your settings) ---------- */
+const EXP_SUGGEST=['Part-66 licence','Company authorisation','Human Factors','EWIS','Fuel Tank Safety','Continuation training','Type course'];
+const expiries=()=>(S.settings.expiries||[]).filter(x=>x&&typeof x==='object');
+const daysTo=iso=>Math.round((Date.parse(iso+'T00:00:00Z')-Date.parse(todayISO()+'T00:00:00Z'))/864e5);
+function expState(x){
+  if(!x.date) return {cls:'none',d:Infinity,txt:'No expiry date set'};
+  const d=daysTo(x.date),when=d===0?'today':d===1?'tomorrow':`in ${d} days`;
+  if(d<0) return {cls:'bad',d,txt:`Expired ${fmtD(x.date)}, ${-d} ${d===-1?'day':'days'} ago`};
+  if(d<=30) return {cls:'bad',d,txt:`Expires ${fmtD(x.date)}, ${when}`};
+  if(d<=90) return {cls:'warn',d,txt:`Expires ${fmtD(x.date)}, ${when}`};
+  return {cls:'ok',d,txt:`Valid until ${fmtD(x.date)}`};
+}
+async function saveExpiries(list){await setSetting('expiries',list);renderExpCard();renderEntryAlerts();}
+function renderExpCard(){
+  const list=expiries(),have=new Set(list.map(x=>x.name));
+  $('expCard').innerHTML=`<div class="hint" style="margin-top:0">Add the dates your licence, authorisation and training run out. You're warned 90, 60 and 30 days before, on the Work log and the Entry tab, and the dates print on the Work log PDF.</div>
+    ${list.map((x,i)=>{const st=expState(x);return `<div class="exrow">
+      <input aria-label="Name" data-i="${i}" data-k="name" value="${esc(x.name)}" placeholder="What expires">
+      <input type="date" aria-label="Expiry date for ${esc(x.name)}" data-i="${i}" data-k="date" value="${esc(x.date||'')}">
+      <button type="button" class="x-btn" data-del="${i}" aria-label="Remove ${esc(x.name)}">×</button>
+      <div class="exst ${st.cls}">${st.txt}</div></div>`;}).join('')}
+    <label>Add</label>
+    <div class="chips">${EXP_SUGGEST.filter(n=>!have.has(n)).map(n=>`<button type="button" class="chip mini" data-add="${esc(n)}">${esc(n)}</button>`).join('')}<button type="button" class="chip mini" data-add="">Something else</button></div>`;
+}
+$('expCard').addEventListener('change',e=>{
+  const t=e.target.closest('[data-i]');if(!t)return;
+  const list=expiries().map(x=>({...x}));list[+t.dataset.i][t.dataset.k]=t.value.trim();saveExpiries(list);toast('Saved');
+});
+$('expCard').addEventListener('click',e=>{
+  const a=e.target.closest('[data-add]'),d=e.target.closest('[data-del]');
+  if(a){const list=[...expiries(),{id:uid(),name:a.dataset.add,date:''}];saveExpiries(list).then(()=>{const ins=$('expCard').querySelectorAll('.exrow input'+(a.dataset.add?'[type=date]':'[data-k=name]'));const last=ins[ins.length-1];if(last)last.focus();});}
+  if(d){const list=expiries();if(!confirm(`Remove ${list[+d.dataset.del].name||'this item'}?`))return;list.splice(+d.dataset.del,1);saveExpiries(list);}
+});
+// expiring items: within 90 days (or already expired), soonest first
+const dueSoon=(days=90)=>expiries().filter(x=>x.name&&x.date).map(x=>({...x,st:expState(x)})).filter(x=>x.st.d<=days).sort((a,b)=>a.st.d-b.st.d);
+function expiryHtml(days){
+  const due=dueSoon(days);if(!due.length) return '';
+  const worst=due.some(x=>x.st.cls==='bad')?'bad':'warn';
+  return `<div class="status ${worst}"><b>${due.some(x=>x.st.d<0)?'Something has expired':'Coming up for renewal'}</b><ul>${due.map(x=>`<li>${esc(x.name)}: ${x.st.txt}</li>`).join('')}</ul></div>`;
+}
+
+/* ---------- RECENCY: Part-66 66.A.20(b)(2) six months in two years, and current-fleet types ---------- */
+function isoPlusDays(iso,n){return new Date(Date.parse(iso+'T00:00:00Z')+n*864e5).toISOString().slice(0,10);}
+function recencyStatusHtml(short=false){
+  const all=live(S.entries).filter(e=>e.date),cut=isoMinusYears(2),soon=isoPlusDays(cut,91);
+  const months=new Set(all.filter(e=>e.date>=cut).map(e=>e.date.slice(0,7))).size;
+  const later=new Set(all.filter(e=>e.date>=soon).map(e=>e.date.slice(0,7))).size;   // what will still count in 3 months
+  let cls,title,msg;
+  if(months>=6&&later>=6){cls='ok';title='On track';msg=`${months} months with work in the last 2 years.`;}
+  else if(months>=6){cls='warn';title='Getting close';msg=`${months} months with work in the last 2 years, but in 3 months only ${later} of them will still count. Log some work to stay above 6.`;}
+  else{cls='bad';title='Below 6 months';msg=`${months} ${months===1?'month':'months'} with work in the last 2 years. You need 6 months of relevant experience in 2 years to use your licence.`;}
+  // current-fleet types not worked on for 6 months
+  const types=new Map();
+  for(const a of live(S.aircraft)) if(acRank(a)<99){const t=typeLabel(a);if(!types.has(t))types.set(t,{ids:new Set(),last:''});types.get(t).ids.add(a.id);}
+  for(const e of all) for(const o of types.values()) if(o.ids.has(e.aircraftId)&&e.date>o.last) o.last=e.date;
+  const stale=[...types.entries()].filter(([,o])=>!o.last||daysTo(o.last)<-183).sort((a,b)=>pinRank(a[0])-pinRank(b[0]));
+  const typeLines=stale.map(([t,o])=>`<li>${o.last?`No ${esc(t)} work since ${fmtD(o.last)}`:`No ${esc(t)} work logged yet`}</li>`).join('');
+  if(stale.length&&cls==='ok') cls='warn';
+  if(short) return `<div class="status ${cls}"><b>${title}</b>${months} ${months===1?'month':'months'} with work in the last 2 years. Details on the Work log page.</div>`;
+  return `<div class="status ${cls}"><b>${title}</b>${msg}${typeLines?`<ul>${typeLines}</ul>`:''}<div class="hint" style="margin-top:4px">A guide based on months with logged work. Your company's own assessment is what counts.</div></div>`;
+}
+function renderEntryAlerts(){
+  // on the Entry tab only the urgent things: expiring within 30 days, or recency gone red in the work log
+  let h=expiryHtml(30);
+  if(MODE==='cur'){const r=recencyStatusHtml(true);if(/status bad/.test(r)) h+=r;}
+  $('entryAlerts').innerHTML=h;
+}
+
+/* ---------- REPEAT A PAST JOB ---------- */
+function repeatItems(){
+  const m=new Map();
+  for(const e of live(S.entries)){
+    if(!e.task) continue;
+    const k=compact(e.task)+'|'+(e.ata||'');
+    const o=m.get(k);
+    if(!o) m.set(k,{e,n:1,mine:logOf(e)===MODE,hay:compact(e.task+' '+(e.manual||'')+' '+(ATA_NAME[e.ata]||'')+' '+(e.ata||''))});
+    else{o.n++;if(cmp(e.date,o.e.date)>0)o.e=e;if(logOf(e)===MODE)o.mine=true;}
+  }
+  return [...m.values()];
+}
+function findRepeat(d,q){
+  const words=q.toLowerCase().split(/\s+/).map(compact).filter(Boolean);
+  let hits=words.length?d.items.filter(it=>words.every(w=>it.hay.includes(w))):d.items.filter(it=>it.mine);
+  return hits.sort((a,b)=>(b.mine-a.mine)||(b.n-a.n)||cmp(b.e.date,a.e.date)).slice(0,8);
+}
+attachSuggest($('fRepeat'),{local:repeatItems,source:'your past jobs',find:findRepeat,minLen:1,onFocus:true,
+  row:it=>`<b>${esc(it.e.task)}</b><small>${it.e.ata?'ATA '+it.e.ata+', ':''}${(it.e.acts||[]).join(' ')}${(it.e.acts||[]).length?', ':''}${it.n>1?`done ${it.n} times, last`:'done'} ${fmtD(it.e.date)}</small>`,
+  pick:it=>{
+    const e=it.e;
+    acts=new Set(e.acts||[]);renderActs();
+    if(e.ata) setAta(e.ata);
+    $('fTask').value=e.task||'';$('fManual').value=e.manual||'';$('fTooling').value=e.tooling||'';
+    if(MODE==='exp') $('fReason').value=e.reason||'';
+    $('fRepeat').value='';onFormInput();
+    toast(`Filled in from ${fmtD(e.date)}. Add the date, aircraft and job card.`,3500);
+  }});
+
+/* ---------- SHIFT MODE: several tasks on one date, aircraft and job card ---------- */
+$('fShift').addEventListener('change',()=>{DEV.shift=$('fShift').checked;saveDev();updateShiftList();});
+function updateShiftList(){
+  const box=$('shiftList');
+  const date=parseD($('fDate').value),ac=$('fAc').value,job=$('fJob').value.trim();
+  if(!$('fShift').checked||!date||!ac||editingId){box.innerHTML='';return;}
+  const done=live(S.entries).filter(e=>logOf(e)===MODE&&e.date===date&&e.aircraftId===ac&&(e.job||'')===job).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
+  const a=acById(ac);
+  box.innerHTML=done.length?`<div class="shiftlist"><b>${done.length} ${done.length===1?'task':'tasks'} saved on ${esc(a?.reg||'')}, ${fmtD(date)}${job?', job '+esc(job):''}</b><ol>${done.slice(-10).map(e=>`<li>${esc(e.task)}</li>`).join('')}</ol></div>`:'';
+}
+
+$('fDate').addEventListener('input',()=>setTimeout(updateShiftList,0));
+
+/* ---------- IMPORT A COMPANY JOB REPORT (Excel or CSV) ---------- */
+let xlsxP=null;
+function loadXlsx(){
+  return xlsxP||(xlsxP=new Promise((res,rej)=>{
+    if(window.XLSX) return res(window.XLSX);
+    const sc=document.createElement('script');sc.src='xlsx.mini.min.js';
+    sc.onload=()=>res(window.XLSX);
+    sc.onerror=()=>{xlsxP=null;rej(new Error('The Excel reader could not load. Open the app once with signal so it is saved for offline use.'));};
+    document.head.appendChild(sc);
+  }));
+}
+const RHEAD={reg:/registration|^a\/?c reg|^reg$/i,type:/aircraft type|^type$/i,desc:/description|^task/i,ata:/^ata/i,date:/day done|^date/i,job:/work order|^w\/?o\b|job/i};
+function cellISO(v){
+  if(v===''||v==null) return '';
+  if(typeof v==='number') return new Date(Date.UTC(1899,11,30)+Math.round(v)*864e5).toISOString().slice(0,10);   // Excel day number
+  return parseD(String(v).trim().replace(/\s+\d{1,2}:\d{2}.*$/,''))||'';
+}
+async function readJobReport(file){
+  const XL=await loadXlsx();
+  const wb=XL.read(new Uint8Array(await file.arrayBuffer()),{type:'array'});
+  const rows=XL.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:true,defval:''});
+  const hi=rows.findIndex(r=>r.some(c=>RHEAD.reg.test(String(c).trim()))&&r.some(c=>RHEAD.desc.test(String(c).trim())));
+  if(hi<0) throw new Error('No column headings found. The report needs Aircraft Registration, Description, Ata Chapter, Day Done and Work Order columns.');
+  const h=rows[hi].map(c=>String(c).trim()),col={};
+  for(const [k,re] of Object.entries(RHEAD)) col[k]=h.findIndex(x=>re.test(x));
+  if(col.date<0) throw new Error('No date column found (Day Done).');
+  return rows.slice(hi+1).map(r=>{
+    const g=k=>col[k]<0?'':r[col[k]];
+    let a=String(g('ata')).replace(/\D/g,'');if(a.length===1)a='0'+a;a=a.slice(0,2);
+    return {reg:String(g('reg')).trim().toUpperCase(),type:String(g('type')).trim(),desc:String(g('desc')).replace(/\s+/g,' ').trim(),
+      ata:ATA_NAME[a]?a:'',date:cellISO(g('date')),job:String(g('job')).trim().replace(/^0+(?=\d)/,'')};
+  }).filter(r=>r.reg||r.desc);
+}
+function guessActs(t){
+  t=t.toUpperCase();const a=[];
+  if(/\bASB\b|\bSB\b|\bMOD\b|MODIFICATION/.test(t)) a.push('MOD');
+  if(/REPLAC|REMOV|INSTALL|\bFIT\b|\bFITTED\b|R\/R/.test(t)) a.push('R/I');
+  if(/TROUBLESHOOT|FAULT FIND|INVESTIGAT/.test(t)) a.push('TS');
+  if(/\bREPAIR/.test(t)) a.push('REP');
+  if(/FUNCTION|OPERATIONAL|\bOPS?\b|\bTEST|GROUND RUN|\bFOT\b|LEAK CHECK/.test(t)) a.push('FOT');
+  if(/OIL CHANGE|SERVIC|REPLENISH|LUBRIC|GREAS|CLEAN|WASH|WEIGH|BLEED|\bTOW|CHARG|SAMPLE/.test(t)) a.push('SGH');
+  if(/INSP|\bGVI\b|\bDVI\b|\bSDI\b|VISUAL|\bCHE?C?K\b|CHK|BORESCOPE/.test(t)&&!a.includes('FOT')) a.push('INSP');
+  return ACTS.map(x=>x[0]).filter(c=>a.includes(c));
+}
+// an aircraft for a reg in the report: one you have, else a new one copied from an aircraft of the same type code
+function acForReport(reg,code,made){
+  const t=compact(reg);
+  const have=live(S.aircraft).find(a=>compact(a.reg)===t||a.reg.split(/\s*[\/,]\s*|\s+/).map(compact).includes(t));
+  if(have) return {id:have.id};
+  if(made.has(t)) return made.get(t);
+  const c=compact(code),like=c?live(S.aircraft).find(a=>compact([a.model,a.typeOverride,a.make].join(' ')).includes(c)):null;
+  const a={id:uid(),reg,make:like?.make||'',model:like?.model||code,engine:like?.engine||'',serial:'',typeOverride:like?.typeOverride||''};
+  const out={id:a.id,newAc:a};made.set(t,out);return out;
+}
+$('btnJobImport').onclick=()=>$('jobFile').click();
+$('jobFile').onchange=async ev=>{
+  const f=ev.target.files[0];ev.target.value='';if(!f)return;
+  let rows;
+  try{rows=await readJobReport(f);}catch(err){alert('Could not read that report: '+err.message);return;}
+  const pool=live(S.entries),used=new Set(),fresh=[],made=new Map();let dupes=0,blank=0,nodate=0;
+  for(const r of rows){
+    if(!r.desc||/^FROM TECH LOG PAGE/i.test(r.desc)){blank++;continue;}
+    if(!r.date){nodate++;continue;}
+    const cd=compact(r.desc);
+    const hit=pool.find(e=>!used.has(e.id)&&e.date===r.date&&String(e.job||'').replace(/^0+(?=\d)/,'')===r.job&&compact(e.task).startsWith(cd));
+    if(hit){used.add(hit.id);dupes++;continue;}
+    fresh.push({...r,ac:acForReport(r.reg,r.type,made),acts:guessActs(r.desc)});
+  }
+  const newAcs=[...made.values()].filter(x=>x.newAc).map(x=>x.newAc);
+  openModal('Import job report',`
+    <p><b>${esc(f.name)}</b>: ${rows.length} rows.</p>
+    <p>${fresh.length?`${fresh.length} new ${fresh.length===1?'job':'jobs'} to add to your work log.`:'Nothing new to add.'} ${dupes} already in your log${blank?`, ${blank} with no description (such as "FROM TECH LOG PAGE")`:''}${nodate?`, ${nodate} with no date`:''} ${dupes+blank+nodate===1?'is':'are'} skipped.</p>
+    ${newAcs.length?`<p>New aircraft that will be added: ${newAcs.map(a=>esc(a.reg)).join(', ')}. Check their type on the Aircraft tab afterwards.</p>`:''}
+    ${fresh.length?`<label class="check"><input type="checkbox" id="impAll" checked> Select all</label>
+    <div class="implist">${fresh.map((r,i)=>`<label><input type="checkbox" data-imp="${i}" checked><span><span class="mono">${fmtD(r.date)} ${esc(r.reg)}${r.job?' '+esc(r.job):''}${r.ata?' ATA '+r.ata:''}${r.acts.length?' '+r.acts.join(' '):''}</span><br>${esc(r.desc)}</span></label>`).join('')}</div>
+    <div class="hint">Untick any you don't want, such as a task the report lists more than once. Activity types are a best guess from the wording.</div>
+    <div class="btns"><button class="btn" id="impGo" type="button">Add ${fresh.length} ${fresh.length===1?'job':'jobs'}</button><button class="btn sec" id="impNo" type="button">Cancel</button></div>`
+    :`<div class="btns"><button class="btn sec" id="impNo" type="button">Close</button></div>`}`,
+  ()=>{
+    $('impNo').onclick=closeModal;
+    if(!fresh.length) return;
+    const boxes=()=>[...$('mBody').querySelectorAll('[data-imp]')];
+    const count=()=>{const n=boxes().filter(b=>b.checked).length;$('impGo').textContent=`Add ${n} ${n===1?'job':'jobs'}`;$('impGo').disabled=!n;};
+    $('impAll').onchange=()=>{boxes().forEach(b=>b.checked=$('impAll').checked);count();};
+    $('mBody').addEventListener('change',e=>{if(e.target.dataset.imp!==undefined)count();});
+    $('impGo').onclick=async()=>{
+      const pick=boxes().filter(b=>b.checked).map(b=>fresh[+b.dataset.imp]);
+      const needAc=new Set(pick.map(r=>r.ac.id));
+      for(const a of newAcs) if(needAc.has(a.id)) upsert(S.aircraft,{...a});
+      const t0=now();
+      pick.forEach((r,i)=>upsert(S.entries,{id:uid(),createdAt:t0+i,log:'cur',role:'Certified (CRS)',purpose:'',acts:r.acts,date:r.date,aircraftId:r.ac.id,ata:r.ata,job:r.job,task:r.desc,
+        reason:'',manual:'',tooling:'',challenges:'',result:'',supervisorId:'',fault:'',rect:'',parts:'',notes:'',hours:'',source:'import'}));
+      await save();closeModal();refreshAll();
+      toast(`Added ${pick.length} ${pick.length===1?'job':'jobs'} to your work log`,3500);
+    };
+  });
 };
 
 /* ---------- SEARCH (both logs) ---------- */
@@ -1912,6 +2159,7 @@ async function renderSettings(){
   $('sOwner').value=S.settings.ownerName||'';
   $('sOwnerCat').value=S.settings.ownerCat||'';$('sOwnerLic').value=S.settings.ownerLic||'';$('sOwnerMro').value=S.settings.ownerMro||'';$('sOwnerStamp').value=S.settings.ownerStamp||'';
   $('sAskPrint').checked=askPrintOn();
+  renderExpCard();
   document.querySelectorAll('#sMark button').forEach(b=>b.classList.toggle('on',b.dataset.m===contMark()));
   const t=await idb.get('template');
   $('tplStatus').textContent=t?`Using ${t.name} (task page ${t.taskPage}, signature page ${t.sigPage}).`:'Using the built-in CAP 741 Issue 4 Section 3.1 pages.';
@@ -2079,7 +2327,9 @@ function refreshAll(keepForm){
   document.body.dataset.view='log';
   const draft=await idb.get('draft');
   setMode((draft&&draft.log)||DEV.mode||'exp',{boot:true});
+  $('fShift').checked=!!DEV.shift;
   newEntry(draft||undefined);
+  renderEntryAlerts();
   setPill();
   templateBytes().catch(()=>toast('PDF template missing. Check cap741-template.pdf is uploaded.',4000));
   if(!S.settings.ownerName&&!live(S.entries).length) setTimeout(()=>{show('set');toast('Start by adding your name, or connect Dropbox below to bring in your logbook and settings.',5000);},300);

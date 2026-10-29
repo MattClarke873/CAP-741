@@ -11,6 +11,7 @@ https://mattclarke873.github.io/CAP-741/
 | `index.html` | The whole app |
 | `cap741-template.pdf` | Blank Section 3.1 task page + signature sheet (from CAP 741 Issue 4) |
 | `pdf-lib.min.js` | PDF library (local copy so it works offline) |
+| `xlsx.mini.min.js` | Excel reader for importing job reports (SheetJS, local copy) |
 | `data/part66-types.json` | Aircraft type suggestions, built from the UK Part-66 type rating list |
 | `data/part145-orgs.json` | MRO suggestions, built from the CAA list of UK Part 145 organisations |
 | `sw.js` | Offline cache — bump `VERSION` when you upload changes |
@@ -55,6 +56,17 @@ The switch at the top of the Entry and Logbook tabs flips between **Experience**
 
 ### Search
 The **Search** tab looks through both logs. Pick an aircraft type and ATA if you want, then type words: every word must appear somewhere in the entry (task, fault, fix, parts, notes, reason, result, manual ref, job card, reg, supervisor). Matches are highlighted; tap one to open it.
+
+### Importing a company job report
+On the Work log page, **Import a company job report** reads an Excel (.xlsx) or CSV export with Aircraft Registration, Aircraft Type, Description, Ata Chapter, Day Done and Work Order columns (the "Done by" report). Jobs already in your log are skipped (same date and work order, and the task starts with the report's description). Rows with no description, such as "FROM TECH LOG PAGE", are skipped too. You see every new job with a tick box before anything is added. Unknown regs are added as aircraft, copying the type from an aircraft with the same type code. Uses `xlsx.mini.min.js` (SheetJS), loaded only when you import.
+
+### Recency and expiry warnings
+- The Work log page opens with a recency check: months with logged work in the last 2 years against Part-66 66.A.20(b)(2), a warning when you'd drop below 6 within 3 months, and current-fleet types with no work for 6 months.
+- **Settings > Licence and authorisations**: add expiry dates (Part-66 licence, company authorisation, Human Factors, EWIS, fuel tank safety, continuation training, type courses or anything else). Warnings show from 90 days out on the Work log, from 30 days on the Entry tab, and the dates print on the Work log PDF.
+
+### Repeat a past job and shift mode
+- **Repeat a past job** at the top of the Entry tab: type part of a task and pick it. It fills the task, ATA, activity, manual reference and tooling. Tap the box with nothing typed to see your most frequent jobs.
+- **Shift mode** (tick box under the job card): after each save the date, aircraft and job card stay filled, and a list under Save shows the tasks already logged on that job card.
 
 ### Current fleet first
 EC175/H175, S-92 and AW139 aircraft are listed first in the aircraft suggestions, the type filters and the Aircraft tab. Change the `PINNED` patterns near the top of the script in `index.html` to change the fleet.
