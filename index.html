@@ -393,18 +393,15 @@ nav button{font-size:12px}
     <label>Task <span class="opt">(what you did)</span></label>
     <textarea id="fTask" rows="2" placeholder="e.g. Removed and refitted No.1 engine starter-generator"></textarea>
     <div class="dupbox" id="dupBox" hidden></div>
-    <div class="only-exp">
     <label>Reason</label>
     <input id="fReason" placeholder="e.g. Scheduled maintenance">
     <div class="chips" id="reasonChips" style="margin-top:8px"></div>
-    </div>
     <div class="only-cur">
     <label>Fault / defect</label>
     <textarea id="fFault" rows="2" placeholder="e.g. DC BUS 2 caution, intermittent in flight"></textarea>
     <label>Rectification <span class="opt">(what fixed it)</span></label>
     <textarea id="fRect" rows="2" placeholder="e.g. Chafed wire at frame 4 repaired, No.2 GCU replaced"></textarea>
-    <label>Parts <span class="opt">(P/N, S/N off and on)</span></label>
-    <input id="fParts" class="mono" placeholder="e.g. P/N 3214-552  S/N off A123 / on B456" autocapitalize="characters">
+    <input id="fParts" type="hidden">
     </div>
     <label>Manual reference</label>
     <input id="fManual" placeholder="e.g. AMM 24-30-01">
@@ -1968,7 +1965,7 @@ attachSuggest($('fRepeat'),{local:repeatItems,source:'your past jobs',find:findR
     acts=new Set(e.acts||[]);renderActs();
     if(e.ata) setAta(e.ata);
     $('fTask').value=e.task||'';$('fManual').value=e.manual||'';$('fTooling').value=e.tooling||'';
-    if(MODE==='exp') $('fReason').value=e.reason||'';
+    $('fReason').value=e.reason||'';
     $('fRepeat').value='';onFormInput();
     toast(`Filled in from ${fmtD(e.date)}. Add the date, aircraft and job card.`,3500);
   }});
